@@ -61,8 +61,8 @@ var MOVE_DELAY=10;
 /* Game */
 var LEVELS = [];
 var LEVELS_INITED = false;
-var CURRENT_LEVEL = 0;
-var TOTAL_SCORE = 0;
+var CURRENT_LEVEL; //Will be set during init
+var TOTAL_SCORE; //Will be set during init
 var LEVEL_SCORE= 0;
 var EARNED_POINTS = { "5": 40, "10": 20, "15": 40, "bonus" : 1000};
 
@@ -344,6 +344,8 @@ function mazeComplete() {
     maze.complete();
     TOTAL_SCORE += LEVEL_SCORE;
     LEVEL_SCORE = 0;
+    CURRENT_LEVEL+=1;
+    saveGameState();
     renderScore();
     cleanUp();
 }
@@ -368,12 +370,23 @@ function gameComplete() {
 /*************************************/
 
 function init() { 
+    initGameState();
 	loadAssets(); 
     //Init configuration panel
     $("input[name=speed]:radio").click(function() {changeSpeed(this.value);});
     $("#ctrl_fx").click(function() {toggleFX(this.checked);});
     $("#ctrl_music").click(function() {toggleMusic(this.checked)});
     init_sound();
+}
+
+function saveGameState() {
+  $.cookie("CurrentLevel",CURRENT_LEVEL);
+  $.cookie("TotalScore",TOTAL_SCORE);
+}
+
+function initGameState() {
+  CURRENT_LEVEL = $.cookie("CurrentLevel") ? parseInt($.cookie("CurrentLevel")) : 0;
+  TOTAL_SCORE = $.cookie("TotalScore") ? parseInt($.cookie("TotalScore")) : 0;
 }
 
 function loadAssets() {
@@ -497,7 +510,6 @@ function game_init() {
 function maze_init(){
     if(game_state == GAME_STATES.COMPLETE) {
 		tileStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-        CURRENT_LEVEL+=1;
         if (CURRENT_LEVEL>=LEVELS.length){
             gameComplete();
             return;
