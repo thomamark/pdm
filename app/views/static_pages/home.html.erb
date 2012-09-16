@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 
 
+<% content_for :header do %>
 <style type="text/css">
   p { 
     color: black; 
@@ -32,6 +33,7 @@
 
 </style>
 
+
 <script type="text/javascript">
   var ENTER_KEY = 13;
   function onKeyDown($evt) {
@@ -46,12 +48,14 @@
        window.setTimeout(blinker, 50000/60);
   }
 
-  $(document).ready( function() {
+  $('document').ready( function() {
       window.onkeydown = onKeyDown;
       window.setTimeout(blinker, 50000 / 60);
   });
 
 </script>
+
+<% end %>
 
 <audio id="theme" preload="auto" autoplay="true" loop="true">
     <source src="audio/theme.mp3" type="audio/mp3" />
@@ -59,6 +63,6 @@
     Oops! Your broswer does not support HTML 5 audio! Get with it, install the latest version of Chrome, Firefox, Opera, or Safari and start playing!
 </audio>
 <div id="intro">
-  <p>The pandas are being burgled! Twist through the burgler&#146;s mazes and save them before it&#146;s too late!</p>
+  <p id="story" >The pandas are being burgled! Twist through the burgler&#146;s mazes and save them before it&#146;s too late!</p>
   <h2 id="enterText">Press Enter</h2>
 </div>
