@@ -1,0 +1,45 @@
+@font-face {
+  font-family: StarPerv;
+  src: url(<%= asset_path('StarPerv.ttf') %>);
+}
+
+body {
+    font-family: StarPerv;
+    font-size: 18pt;
+    color: #333333;
+	position: absolute;
+	top: 0;
+	left: 0;
+	float: left;
+	clear: none;
+	width: 100%;
+	height: 790px;
+	z-index: 1;
+	/* background: url('../img/grid_tile.png'); */
+	overflow: hidden;
+	background-position: center;
+}
+
+
+.cube{
+    width:28px;
+    height:28px;
+    display:block;
+    visibility:hidden;
+    position:absolute;
+    top:0;
+    left:0;
+    z-index:1;
+    /* background-image:url("../img/blocks.png"); */
+    background-repeat:no-repeat;
+}
+
+.cube.inactive{}
+.color-blue{background-position:0 0;}
+.color-orange{background-position:0 -28px;}
+.color-green{background-position:0 -56px;}
+.color-pink{background-position:0 -84px;}
+.color-red{background-position:0 -112px;}
+.color-yellow{background-position:0 -140px;}
+.color-grey{background-position:0 -168px;}
+.color-brown{background-position:0 -225px;}

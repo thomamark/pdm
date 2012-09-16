@@ -370,6 +370,7 @@ function gameComplete() {
 /*************************************/
 
 function init() { 
+
     initGameState();
 	loadAssets(); 
     //Init configuration panel
@@ -518,6 +519,11 @@ function maze_init(){
     } 
 
     if (game_state != GAME_STATES.FAILED) {
+      if (CURRENT_LEVEL >= LEVELS.length) { 
+        //Ran into messed up cookie values.
+        CURRENT_LEVEL = 0; 
+        TOTAL_SCORE = 0;
+      }
         maze = LEVELS[CURRENT_LEVEL];
         $(gameCanvas).attr("height", maze.cols*26);
         $(gameCanvas).attr("width", maze.rows*GRID_W);
@@ -1151,4 +1157,16 @@ function getScreenY($x,$y) {
 /* Main                              */
 /*************************************/
 
-$(document).ready(init);
+if ( window.location.pathname == "/") {
+  //We're on the homepage, so we don't need any of the rest of this javascript
+  //Note I'm doing this to work around Rails' poor support for 
+  //page-specific js
+    
+   if ( $.cookie("CurrentLevel") && $.cookie("CurrentLevel") > 0) {
+      //Saved game has been found
+      window.location = "play";
+    }
+} else { 
+  //We're on the play page, so load up the game.
+  $(document).ready(init);
+}
