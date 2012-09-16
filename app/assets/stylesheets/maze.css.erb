@@ -5,7 +5,7 @@
 
 body {
     font-family: StarPerv;
-    font-size: 18pt;
+    font-size: 14pt;
     color: #333333;
 	position: absolute;
 	top: 0;
@@ -20,6 +20,63 @@ body {
 	background-position: center;
 }
 
+.canvas {
+  position: absolute;
+  top: 20px;
+  left: 0px;
+}
+
+.overlay {
+  position: absolute;
+  top: 80px;
+  left: 288px;
+}
+
+#scorebar {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  font-size: 12pt;
+  width: 900px;
+}
+.scorebox {
+  float: left;
+  width: 300px;
+  text-align: center;
+}
+
+#level_score {
+  color: #00CC33;
+}
+
+
+#lightbox {
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  z-index: 999;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+
+#optionsbg {
+  position: absolute;
+  top: 10px;
+  left: 104px;
+  }
+
+#optionsDone {
+  color: blue;
+  font-size: 24;
+}
+
+
+#quit {
+  #color: red;
+  #font-size: 24;
+  }
 
 .cube{
     width:28px;
@@ -32,6 +89,30 @@ body {
     z-index:1;
     /* background-image:url("../img/blocks.png"); */
     background-repeat:no-repeat;
+}
+
+
+input[type='checkbox'],
+input[type='radio']{
+  opacity: 0;
+
+  width: 17px;
+  height: 18px;
+}
+
+input[type='checkbox'] + label,
+input[type='radio'] + label {
+  padding-left: 24px;
+  width: 19px;
+ background: url(<%= asset_path('check_box_N_sm.png') %>) 0 0px no-repeat;
+}
+
+input[type='checkbox']:checked + label,
+input[type='radio']:checked + label {
+  padding-left: 24px;
+  clear: none;
+  width: 19px;
+ background: url(<%= asset_path('check_box_Y_sm.png') %>) 0 0px no-repeat;
 }
 
 .cube.inactive{}

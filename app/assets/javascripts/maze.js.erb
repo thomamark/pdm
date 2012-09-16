@@ -377,7 +377,10 @@ function init() {
     $("input[name=speed]:radio").click(function() {changeSpeed(this.value);});
     $("#ctrl_fx").click(function() {toggleFX(this.checked);});
     $("#ctrl_music").click(function() {toggleMusic(this.checked)});
-    init_sound();
+    $("#options_link").click(function() {toggleOptions()});
+    $("#options_done").click(function() {toggleOptions()});
+    $("#quit").click(function() {quit()});
+    initSound();
 }
 
 function saveGameState() {
@@ -560,7 +563,7 @@ function changeSpeed(s) {
 
 //Set up audio channels for seamless, simultaneous play of multiple sounds
 //Thanks to http://www.storiesinflight.com/html5/audio.html 
-function init_sound() {
+function initSound() {
     //Code courtesy of http://html5doctor.com/native-audio-in-the-browser/
     var myAudio = $('#theme'); 
     if (myAudio.canPlayType) {
@@ -624,6 +627,20 @@ function toggleMusic(on) {
     } else {
         stopMusic();
     }
+}
+
+function toggleOptions() {
+  $("#lightbox").toggle();
+}
+
+function deleteCookie() {
+  $.removeCookie("CurrentLevel");
+  $.removeCookie("TotalScore");
+}
+
+function quit() {
+  deleteCookie();
+  window.location = "/";
 }
 
 //Plays multiple sounds simultaneously a bit more smoothly than would happen normally.
@@ -1121,6 +1138,7 @@ function updateScore(p) {
 function renderScore() {
         $('#total_score').text(TOTAL_SCORE);
         $('#level_score').text(LEVEL_SCORE);
+        $('#current_level').text(CURRENT_LEVEL);
 }
 
 /*************************************/

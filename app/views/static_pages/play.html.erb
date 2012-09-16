@@ -20,12 +20,10 @@
             <source src="audio/victory.mp3" type="audio/mp3" />
             <source src="audio/victory.ogg" type="audio/ogg" />
         </audio>
-        <div id="title">
-                <p>Panda Dragon Maze v0</p>
-        </div>
-        <div id="left-col" style="width:250px; float:left">
-                <h3>Total Score: <span id="total_score">0</span></h3>
-                <h3 style="color:green">Level Score: <span id="level_score">0</span></h3>
+        <div id="lightbox">
+          <img id="optionsbg" src="<%= asset_path('optionsbg.png') %>"/>
+        <div class="overlay" id="options_panel">
+
             <h3>Speed</h3>
             <input id="speed_0" type="radio" name="speed" value="5"> <label for="speed_0">Hyperspeed</label><br>
             <input id="speed_1" type="radio" name="speed" value="10" checked> <label for="speed_1">Mere mortal</label><br>
@@ -33,10 +31,20 @@
             <h3>Sound</h3>
             <input id="ctrl_fx" type="checkbox" name="soundfx" value="FX" checked="true"/> <label for="ctrl_fx">Sound effects</label> <br/>
             <input id="ctrl_music" type="checkbox" name="music" value="music" checked="true"/> <label for="ctrl_music">Music</label>
+
+            <a href="#" id="options_done">Done</a>
+            <a href="#" id="quit">Quit</a>
         
         </div>
-        <div id="game-content">
-                <canvas id="tile-canvas" style="z-index: 1; position:absolute; left:251px; top:0px;"></canvas>
-                <canvas id="maze-canvas-background" style="z-index: 2; position:absolute; left:251px; top:0px;"></canvas>
-                <canvas id="maze-canvas" style="z-index: 3; position:absolute; left:251px; top:0px;"></canvas>
+      </div>
+        <div id="scorebar">
+                <span>Level:<span id="current_level">0</span></span>
+                <span>Score: 
+                  <span id="total_score">0</span>+<span id="level_score">0</span></span>
+                <a href="#" id="options_link">options</a>
+        </div>
+        <div class="canvas" id="game-content">
+                <canvas class="canvas" id="tile-canvas" style="z-index: 1;"></canvas>
+                <canvas class="canvas" id="maze-canvas-background" style="z-index: 2;"></canvas>
+                <canvas class="canvas" id="maze-canvas" style="z-index: 3;"></canvas>
         </div>
