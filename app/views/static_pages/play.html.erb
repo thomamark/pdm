@@ -22,18 +22,21 @@
         </audio>
         <div id="lightbox">
           <img id="optionsbg" src="<%= asset_path('optionsbg.png') %>"/>
-        <div class="overlay" id="options_panel">
-
-            <h3>Speed</h3>
-            <input id="speed_0" type="radio" name="speed" value="5"> <label for="speed_0">Hyperspeed</label><br>
-            <input id="speed_1" type="radio" name="speed" value="10" checked> <label for="speed_1">Mere mortal</label><br>
-            <input id="speed_2" type="radio" name="speed" value="15"> <label for="speed_2">Senior citizen</label><br>
-            <h3>Sound</h3>
+        <div class="ops_panel" id="options_text">
+            <h2>Options</h2>
+            <h4>Sound</h4>
             <input id="ctrl_fx" type="checkbox" name="soundfx" value="FX" checked="true"/> <label for="ctrl_fx">Sound effects</label> <br/>
             <input id="ctrl_music" type="checkbox" name="music" value="music" checked="true"/> <label for="ctrl_music">Music</label>
 
-            <a href="#" id="options_done">Done</a>
-            <a href="#" id="quit">Quit</a>
+            <h4>Speed</h4>
+            <input id="speed_0" type="radio" name="speed" value="5"> <label for="speed_0">Hyperspeed</label><br>
+            <input id="speed_1" type="radio" name="speed" value="10" checked> <label for="speed_1">Mere mortal</label><br>
+            <input id="speed_2" type="radio" name="speed" value="15"> <label for="speed_2">Senior citizen</label><br>
+
+            <div class="optionsFooter">
+              <a href="#" id="options_done">Done</a>
+              <a href="#" id="quit">Quit</a>
+            </div>
         
         </div>
       </div>

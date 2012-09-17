@@ -110,7 +110,7 @@ var THEME;
  @arg c the column of this objection in the maze grid
  @arg isOnFn the function which will be called if the dragon lands on this point
 */
-function Point(img,r, c, isOnFn) {
+function Point(img,r, c, isOnFn, pointType) {
 	this.img=img;
 	this.r=r;
 	this.c=c;
@@ -121,6 +121,7 @@ function Point(img,r, c, isOnFn) {
 //	this.xOffset=-12;
 	this.yOffset=0;
 	this.xOffset=0;
+    this.obj_type=pointType;
 }
 
 //Special point for background tiles. These are used initially to render
@@ -130,7 +131,9 @@ function getBgTile(img, r, c) {
 }
 
 //A RectObj defines a rectangular region of points within the maze
-function RectObj(r1, c1, r2, c2, imgArr, fn) {
+//pointType is an optional string describing the type of point this is. 
+function RectObj(r1, c1, r2, c2, imgArr, fn, pointType) {
+
         //make sure we always create rects from upper-left to bottom-right
         sr = Math.min(r1, r2);
         er = Math.max(r1, r2);
@@ -144,7 +147,7 @@ function RectObj(r1, c1, r2, c2, imgArr, fn) {
                         //Pick a random image from the set given to give
                         //the rectangle a little visual spice
                         myimg = imgArr[Math.floor(Math.random()*imgArr.length)]
-                        points.push(new Point(myimg, myr, myc, fn));
+                        points.push(new Point(myimg, myr, myc, fn, pointType));
                 }
         }
         return points;
@@ -152,10 +155,10 @@ function RectObj(r1, c1, r2, c2, imgArr, fn) {
 
 //A Wall is a RectObj where all points are collisions
 function Wall(sr, sc, er, ec) {
-        this.points = new RectObj(sr, sc, er, ec, [WALL_BLOCK_IMG], mazeCollision);
-        for(var i = 0; i<this.points.length; i++) {
-            this.points[i].obj_type=WALL_TYPE;
-        }
+        this.points = new RectObj(sr, sc, er, ec, [WALL_BLOCK_IMG], mazeCollision, WALL_TYPE);
+//        for(var i = 0; i<this.points.length; i++) {
+//            this.points[i].obj_type=WALL_TYPE;
+//        }
 }
 
 
@@ -1017,13 +1020,13 @@ function update() {
     		}	
     	
     		maze.isOn(dragon.r, dragon.c)
+		    if (game_state != GAME_STATES.PLAYING) { return; }
     
-    		if (dir!="start") {
-                	LEVEL_SCORE += EARNED_POINTS[MOVE_DELAY];
-                	renderScore();
+              if (dir!="start") {
+                LEVEL_SCORE += EARNED_POINTS[MOVE_DELAY];
+                renderScore();
     		}
 
-		if (game_state != GAME_STATES.PLAYING) { return; }
 	        var xy = maze.grid2canvas(oldR,oldC);
 	        gameStage.clearRect(xy[0]+dragon.xOffset,xy[1]+dragon.yOffset,
 		  xy[0]+dragon.img.width*SPRITE_SCALE,
@@ -1138,7 +1141,7 @@ function updateScore(p) {
 function renderScore() {
         $('#total_score').text(TOTAL_SCORE);
         $('#level_score').text(LEVEL_SCORE);
-        $('#current_level').text(CURRENT_LEVEL);
+        $('#current_level').text(CURRENT_LEVEL+1);
 }
 
 /*************************************/
