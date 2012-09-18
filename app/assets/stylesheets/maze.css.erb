@@ -24,6 +24,8 @@ body {
   position: absolute;
   top: 20px;
   left: 0px;
+  width: 900px;
+  height: 500px;
 }
 
 .ops_panel{
@@ -55,6 +57,8 @@ body {
 }
 
 
+/* Options */
+
 #lightbox {
   width: 100%;
   height: 100%;
@@ -65,12 +69,6 @@ body {
   top: 0px;
   left: 0px;
 }
-
-#optionsbg {
-  position: absolute;
-  top: 10px;
-  left: 104px;
-  }
 
 .optionsFooter{
   float: left;
@@ -87,20 +85,6 @@ body {
 #quit {
   color: red;
 }
-
-.cube{
-    width:28px;
-    height:28px;
-    display:block;
-    visibility:hidden;
-    position:absolute;
-    top:0;
-    left:0;
-    z-index:1;
-    /* background-image:url("../img/blocks.png"); */
-    background-repeat:no-repeat;
-}
-
 
 input[type='checkbox'],
 input[type='radio']{
@@ -125,7 +109,6 @@ input[type='radio']:checked + label {
  background: url(<%= asset_path('check_box_Y_sm.png') %>) 0 0px no-repeat;
 }
 
-.cube.inactive{}
 .color-blue{background-position:0 0;}
 .color-orange{background-position:0 -28px;}
 .color-green{background-position:0 -56px;}
