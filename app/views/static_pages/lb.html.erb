@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<% content_for :header do %>
+	 <title>Panda Dragon Maze - Level designer</title>
+		<style type="text/css">
+			.toolbar {
+				width: 100%;
+				float: left;
+				}
+
+		 	.toolbar ul {
+				list-style: none; 
+				display: inline;
+				margin: 0px;
+				padding: 0px;
+			}
+
+			.toolbar li {
+				float: left;
+				width: 108px;
+				height: 108px;
+				border: 1px solid #eee;
+				text-align: center;
+				line-height: 100px;
+				vertical-align: middle;
+			}
+
+			.toolbar li:hover {
+				border: solid 1px #888;
+			}
+
+			.selected {
+				background-color: #99FFFF;
+			}
+
+			.canvas {
+              position: relative;
+              top: auto;
+              left: auto;
+			}
+
+		</style>
+
+		<script>
+			//var SPRITE_SCALE = 1;
+			//var GRID_W = 32*SPRITE_SCALE;
+			//var GRID_H = 16*SPRITE_SCALE;
+            INIT_GAME = false;
+			var selectedId;
+			var selectedImg;
+			var MAX_PER_MAP = {"dragon" : 1};
+			var COUNTS = {};
+
+            var IMGS;
+           
+			function select() {
+				$('li').each(function (i, el) { $(el).removeClass('selected');});
+				selectedId = $(this).id;
+				selectedImg = IMGS[$(this).id];
+				$(this).addClass('selected');
+			}
+
+            $(document).ready( 
+                init(function () {
+                  //wait until images are actually loaded
+
+                  IMGS = {
+                    "wall" : WALL_BLOCK_IMG,
+                    "panda" : PANDA_IMG,
+                    "goal" : PORTAL_IMG,
+                    "dragon" : HEAD_DOWN_IMG, 
+                    "delete" : DELETE_IMG};
+
+
+				  $('li').each( function (i, el) {
+				      $(el).click(select);
+                      $(el).append("<img src='"+IMGS[el.id].src+"' />");
+					  COUNTS[el.id] = 0;
+				   });
+                 })
+				);
+		</script>
+	<!-- what matters:
+				shared code
+					tile size
+					canvas size
+					wall rendering
+					game engine/play (for preview)
+				
+				elements;
+					walls
+					goals
+					pandas
+					start position
+					delete
+
+				P0 features:
+					add element
+					remove element
+					render walls correctly
+					export map creation code
+
+				P1 features:
+					preview/preplay
+					export map
+
+				n2h features:
+					auto-add borders
+					changing tile size
+					adding multiple goals with multiple results
+				
+				-->
+ <% end %>
+
+
+		<div class="toolbar">
+			<ul class="toolbar">
+                <!-- Images added via js  -->
+				<li id="wall"></li>
+				<li id="panda"></li>
+				<li id="goal"></li>
+                <li id="dragon"></li>
+				<li id="delete"></li>
+			</ul>
+		</div>
+	    <canvas class="canvas" id="tile-canvas">

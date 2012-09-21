@@ -39,8 +39,14 @@ var WALL_BLOCK_IMG;
 var PILLAR_IMG;
 var VERTICAL_WALL_IMG;
 var HORIZONTAL_WALL_IMG;
+var DELETE_IMG;
+
+var POST_ASSET_LOAD_FN; //hacky way to get images to load in lb
+
 var IMGDIR ="assets"
 var AUDIODIR ="assets"
+var LOAD_ASSETS = true;
+var INIT_GAME = true;
 
 /* Isometric rendering */
 var COS=Math.cos(0.46365);
@@ -372,18 +378,14 @@ function gameComplete() {
 /* Initialization functions          */
 /*************************************/
 
-function init() { 
+function init(fn) { 
+    POST_ASSET_LOAD_FN = fn;
 
-    initGameState();
-	loadAssets(); 
-    //Init configuration panel
-    $("input[name=speed]:radio").click(function() {changeSpeed(this.value);});
-    $("#ctrl_fx").click(function() {toggleFX(this.checked);});
-    $("#ctrl_music").click(function() {toggleMusic(this.checked)});
-    $("#options_link").click(function() {toggleOptions()});
-    $("#options_done").click(function() {toggleOptions()});
-    $("#quit").click(function() {quit()});
-    initSound();
+    //Short-circuit if we don't want to load assets.
+    if (!LOAD_ASSETS) { return;}
+    loadAssets(); 
+
+
 }
 
 function saveGameState() {
@@ -476,7 +478,8 @@ function loadAssets() {
             "<%= asset_path('wall_stright_vertical.png') %>");
 	    WALL_BLOCK_IMG = createImgAsset("pillar",
             "<%= asset_path('wall_block.png') %>");
-        
+        DELETE_IMG = createImgAsset("delete", 
+            "<%= asset_path('delete.png') %>");
 
     }
 }
@@ -498,10 +501,27 @@ function onAssetLoaded($asset_id) {
 	for(flag in loadFlags) {
 		if(!loadFlags[flag]) {return;}
 	}
+    //Only continue if we want to continue the game
+    if (POST_ASSET_LOAD_FN) {POST_ASSET_LOAD_FN();}
+    if (!INIT_GAME) { return;}
 	game_init();
 }
 
 function game_init() {
+
+    //Init stuff you'll need if you're playing
+    initGameState();
+    //Init configuration panel
+    $("input[name=speed]:radio").click(function() {changeSpeed(this.value);});
+    $("#ctrl_fx").click(function() {toggleFX(this.checked);});
+    $("#ctrl_music").click(function() {toggleMusic(this.checked)});
+    $("#options_link").click(function() {toggleOptions()});
+    $("#options_done").click(function() {toggleOptions()});
+    $("#quit").click(function() {quit()});
+    initSound();
+
+
+    //Set up graphics
 	gameCanvas = document.getElementById('maze-canvas');
 	bgCanvas = document.getElementById('maze-canvas-background');
     tileCanvas = document.getElementById('tile-canvas');
@@ -1174,20 +1194,4 @@ function getScreenY($x,$y) {
 	return y;
 }
 
-/*************************************/
-/* Main                              */
-/*************************************/
-
-if ( window.location.pathname == "/") {
-  //We're on the homepage, so we don't need any of the rest of this javascript
-  //Note I'm doing this to work around Rails' poor support for 
-  //page-specific js
-    
-   if ( $.cookie("CurrentLevel") && $.cookie("CurrentLevel") > 0) {
-      //Saved game has been found
-      window.location = "play";
-    }
-} else { 
-  //We're on the play page, so load up the game.
-  $(document).ready(init);
-}
+//Main functions held in respective pages.

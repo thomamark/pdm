@@ -4,4 +4,8 @@ class StaticPagesController < ApplicationController
 
   def play
   end
+
+  def lb
+  end
+
 end

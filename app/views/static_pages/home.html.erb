@@ -35,6 +35,9 @@
 
 
 <script type="text/javascript">
+  if ( $.cookie("CurrentLevel") && $.cookie("CurrentLevel") > 0) {
+     window.location = "play";
+  }
   var ENTER_KEY = 13;
   function onKeyDown($evt) {
     $evt.preventDefault();
