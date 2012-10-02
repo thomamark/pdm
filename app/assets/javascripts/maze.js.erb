@@ -9,8 +9,12 @@
 
 /* Graphics */
 var SPRITE_SCALE = 1;
+var BASE_W = 32;
+var BASE_H= 16;
 var GRID_W = 32*SPRITE_SCALE;
 var GRID_H = 16*SPRITE_SCALE;
+var MAX_COLS = Math.floor(900/GRID_W);
+var MAX_ROWS = Math.floor(500/GRID_H);
 var BORDER_IMG; 
 var SNAKE_IMG; 
 var GOAL_IMG; 

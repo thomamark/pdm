@@ -56,8 +56,10 @@
 			var COUNTS = {};
       var IMGS;
 			var OBJS;
-			var oldR;
-			var oldC;
+			var oldR =-1;
+			var oldC = -1;
+			//var canvasX = -1;
+			//var canvasY = -1;
            
 			function select() {
 				$('li').each(function (i, el) { $(el).removeClass('selected');});
@@ -96,21 +98,41 @@
         gameStage = gameCanvas.getContext("2d");
         bgStage = bgCanvas.getContext("2d");
         tileStage = tileCanvas.getContext("2d");
+				var mrpx = MAX_ROWS*GRID_H;
+				var mcpx = MAX_COLS*GRID_W;
+				
+        $('#maze-canvas').attr("height", mrpx);
+        $('#maze-canvas').attr("width", mcpx);
+        $('#maze-canvas-background').attr("height", mrpx);
+        $('#maze-canvas-background').attr("width", mcpx);
+        $('#tile-canvas').attr("height", mrpx);
+        $('#tile-canvas').attr("width", mcpx);
+
+        $('#maze-canvas').height(mrpx);
+        $('#maze-canvas').width(mcpx);
+        $('#maze-canvas-background').height(mrpx);
+        $('#maze-canvas-background').width(mcpx);
+        $('#tile-canvas').height(mrpx);
+        $('#tile-canvas').width(mcpx);
 					
-			  //$('#maze-canvas').click(function(e) {
-					//alert(curR + " " + curC);
-				//});
+			  $('#maze-canvas').click(function(e) {
+					alert(curR + " " + curC);
+				});
 
 			  $('#maze-canvas').mousemove(function(e) {
 					    var pos = findPos(this);
 					    var x = e.pageX - pos.x;
 					    var y = e.pageY - pos.y;
-							var curC = Math.ceil(x/GRID_W);
-							var curR = Math.ceil(y/GRID_H);
+							curC = Math.ceil(x/GRID_W);
+							curR = Math.ceil(y/GRID_H);
+							//$('#cx').text(x);
+							//$('#cy').text(y);
+							//$('#cr').text(curR);
+							//$('#cc').text(curC);
 							if (selectedId && !(curR == oldR && curC == oldC))	{
-								//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+								bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
                 //maze.render();
-								//gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
+								gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
 								renderObject(new selectedObj(curR, curC), gameStage);
 								oldR = curR;
 								oldC = curC;
@@ -181,7 +203,13 @@
 				<li id="delete"></li>
 			</ul>
 		</div>
-        <div id="game-content">
+	<!--
+		<span >X = <span id="cx">&nbsp;</span> </span>
+		<span >Y = <span id="cy">&nbsp;</span> </span>
+		<span >R = <span id="cr">&nbsp;</span> </span>
+		<span >C = <span id="cc">&nbsp;</span> </span>
+	-->
+        <div class="canvas" id="game-content">
                 <canvas class="canvas" id="tile-canvas" style="z-index: 1;"></canvas>
                 <canvas class="canvas" id="maze-canvas-background" style="z-index: 2;"></canvas>
                 <canvas class="canvas" id="maze-canvas" style="z-index: 3;"></canvas>
