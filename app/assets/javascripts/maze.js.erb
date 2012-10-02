@@ -130,15 +130,40 @@ function Point(img,r, c, isOnFn, pointType) {
     this.obj_type=pointType;
 }
 
+
+// A Wall in the maze
+function WallPoint(r,c)  {
+	return new Point(WALL_BLOCK_IMG, r, c, mazeCollision, WALL_TYPE);
+}
+
+//A goal
+function GoalPoint(r,c)  {
+	//TODO: add ability to have different results for different goals
+	return new Point(PORTAL_IMG, r, c, mazeComplete);
+}
+
+//A Panda
+function BonusPoint(r,c) {
+  return  new Point(PANDA_IMG, r, c, collectBonus);
+}
+
+//Dragon starting point
+function StartPoint(r,c) {
+	return new Point(HEAD_DOWN_IMG, r, c, function () {});
+}
+
 //Special point for background tiles. These are used initially to render
 //background images only, so there's no need for an isOn function
-function getBgTile(img, r, c) {
+function TilePoint(img, r, c) {
+   var img = TILES_IMG_ARRAY[Math.floor(Math.random()*TILES_IMG_ARRAY.length)];
    return new Point(img, r, c, null); 
 }
 
-//A RectObj defines a rectangular region of points within the maze
+//A PointArr defines a rectangular region of points within the maze
 //pointType is an optional string describing the type of point this is. 
-function RectObj(r1, c1, r2, c2, imgArr, fn, pointType) {
+//
+//function PointArr(r1, c1, r2, c2, imgArr, fn, pointType) {
+function PointArr(r1, c1, r2, c2, pointConstructor) {
 
         //make sure we always create rects from upper-left to bottom-right
         sr = Math.min(r1, r2);
@@ -147,35 +172,43 @@ function RectObj(r1, c1, r2, c2, imgArr, fn, pointType) {
         ec = Math.max(c1, c2);
 
         var points = [];
-        var myimg;
+        //var myimg;
         for (var myr = sr; myr<=er; myr++){
                 for (var myc = sc; myc <=ec; myc++) { 
                         //Pick a random image from the set given to give
                         //the rectangle a little visual spice
-                        myimg = imgArr[Math.floor(Math.random()*imgArr.length)]
-                        points.push(new Point(myimg, myr, myc, fn, pointType));
+                        //myimg = imgArr[Math.floor(Math.random()*imgArr.length)]
+                        //points.push(new Point(myimg, myr, myc, fn, pointType));
+                        points.push(new pointConstructor(myr, myc));
                 }
         }
         return points;
 }
 
-//A Wall is a RectObj where all points are collisions
-function Wall(sr, sc, er, ec) {
-        this.points = new RectObj(sr, sc, er, ec, [WALL_BLOCK_IMG], mazeCollision, WALL_TYPE);
+//A Wall is a PointArr where all points are collisions
+function WallArr(sr, sc, er, ec) {
+	//accept single-point inputs (i.e.just sr, sc).
+	er = er ? er : sr;
+	ec = ec ? ec : sc;
+        this.points = new PointArr(sr, sc, er, ec, WallPoint);
 //        for(var i = 0; i<this.points.length; i++) {
 //            this.points[i].obj_type=WALL_TYPE;
 //        }
 }
 
 
-//The goal is just a RectObject whose points call the mazeComplete function
-function Goal(sr, sc, er, ec) {
-        this.points = new RectObj(sr, sc, er, ec, [PORTAL_IMG], mazeComplete);
+
+//The goal is just a PointArrect whose points call the mazeComplete function
+function GoalArr(sr, sc, er, ec) {
+	//accept single-point inputs (i.e.just sr, sc).
+	er = er ? er : sr;
+	ec = ec ? ec : sc;
+        this.points = new PointArr(sr, sc, er, ec, GoalPoint);
 }
 
 //BonusPoints are points that can be collected. They are placed in hard-to-reach 
 //locations to increase the difficulty of the maze.
-function Bonus(r,c) {
+function BonusArr(r,c) {
     this.points = [new Point(PANDA_IMG, r, c, collectBonus)];
 }
 
@@ -187,20 +220,36 @@ function Bonus(r,c) {
  * sx, sy x and y pixel offsets 
  * objs an array of MazeObjects
 */
-function Maze (r, c, sr, sc, sx, sy, objs) {
-    this.cols = c;
-    this.rows = r;
-	this.sr = sr;
-	this.sc = sc;
+//function Maze (r, c, sr, sc, sx, sy, objs) {
+function Maze () {
+//    this.cols = c;
+//    this.rows = r;
+//	this.sr = sr;
+//	this.sc = sc;
 	//Set for future calculations, but use sx, sy for brevity below
-	this.xOffset = sx;
-	this.yOffset = sy;
+	this.xOffset = 0;
+	this.yOffset = 0;
 	this.points = [];
-    this.objs = objs;
+//    this.objs = objs;
+    this.objs = [];
     this.doneBonuses = 0;
     this.gotBonuses = 0;
 
-	this.initPoints();
+	//this.initPoints();
+}
+
+
+// Sets the Maze's size in rows (height) and columns (width)
+Maze.prototype.setSize = function (r,c) {
+	this.rows = r;
+	this.cols = c;
+}
+
+/* Sets the Dragon's starting point */
+Maze.prototype.setStart = function(r,c) {
+	this.sr = r;
+	this.sc = c;
+
 }
 
 Maze.prototype.grid2canvas= function (r, c) {
@@ -239,10 +288,10 @@ Maze.prototype.initPoints = function() {
 	}
 
 	//Add borders
-    this.objs.unshift(new Wall(1,1,1,this.cols));
-    this.objs.unshift(new Wall(this.rows,1,this.rows,this.cols));
-    this.objs.unshift(new Wall(2,1,this.rows-1,1));
-    this.objs.unshift(new Wall(2,this.cols,this.rows-1,this.cols));
+    this.objs.unshift(new WallArr(1,1,1,this.cols));
+    this.objs.unshift(new WallArr(this.rows,1,this.rows,this.cols));
+    this.objs.unshift(new WallArr(2,1,this.rows-1,1));
+    this.objs.unshift(new WallArr(2,this.cols,this.rows-1,this.cols));
 
     for (var i=0; i<this.objs.length; i++) {
             var o = this.objs[i];
@@ -296,6 +345,13 @@ Maze.prototype.fixWallImages = function() {
     }
 }
 
+// Adds an array of Point Objects to this Maze
+// Takes arr an Array of Point objects
+Maze.prototype.addObjs= function(arr) {
+	this.objs = this.objs.concat(arr);
+}
+
+// Adds a point object to this Maze
 Maze.prototype.addPoint = function(pt) {
 	this.points[pt.r-1][pt.c-1]=pt;
     return pt;
@@ -318,8 +374,7 @@ Maze.prototype.render = function () {
             //render the background tiles the first time we render the maze.
             if (game_state != GAME_STATES.FAILED) {
                 renderObject(
-                    new getBgTile(TILES_IMG_ARRAY[ 
-                        Math.floor(Math.random()*TILES_IMG_ARRAY.length)], i+1, j+1),
+                    new TilePoint(i+1, j+1),
                     tileStage);
             }
 			if (this.points[i][j]) {
@@ -692,202 +747,257 @@ function init_levels() {
 
     //Wesley's maze
     objs = [];
-    objs.push(new Wall(5,2,16,3));
-    objs.push(new Wall(2,6,3,24));
-    objs.push(new Wall(4,6,5,7));
-    objs.push(new Wall(2,5,6,5));
-    objs.push(new Wall(9,5,9,7));
-    objs.push(new Wall(10,7,15,7));
-    objs.push(new Wall(15,8,15,11));
-    objs.push(new Wall(13,11,14,11));
-    objs.push(new Wall(6,6,6,8));
-    objs.push(new Wall(5,8,5,8));
-    objs.push(new Wall(4,8,4,23));
-    objs.push(new Wall(7,8,7,8));
-    objs.push(new Wall(6,11,6,22));
-    objs.push(new Wall(6,11,6,22));
-    objs.push(new Wall(9,11,9,17));
-    objs.push(new Wall(10,17,16,17));
-    objs.push(new Wall(13,15,15,15));
-    objs.push(new Wall(10,19,15,19));
-    objs.push(new Wall(10,20,10,21));
-    objs.push(new Wall(10,18,10,18));
-    objs.push(new Wall(6,22,6,22));
-    objs.push(new Wall(8,22,10,22));
-    objs.push(new Wall(12,22,13,22));
-    objs.push(new Wall(15,23,15,24));
-    objs.push(new Wall(15,16,15,16));
-    objs.push(new Goal(16,24,16,24));
-    var wm = new Maze(17,25, 3,3, 0, 0, objs);
+    objs.push(new WallArr(5,2,16,3));
+    objs.push(new WallArr(2,6,3,24));
+    objs.push(new WallArr(4,6,5,7));
+    objs.push(new WallArr(2,5,6,5));
+    objs.push(new WallArr(9,5,9,7));
+    objs.push(new WallArr(10,7,15,7));
+    objs.push(new WallArr(15,8,15,11));
+    objs.push(new WallArr(13,11,14,11));
+    objs.push(new WallArr(6,6,6,8));
+    objs.push(new WallArr(5,8,5,8));
+    objs.push(new WallArr(4,8,4,23));
+    objs.push(new WallArr(7,8,7,8));
+    objs.push(new WallArr(6,11,6,22));
+    objs.push(new WallArr(6,11,6,22));
+    objs.push(new WallArr(9,11,9,17));
+    objs.push(new WallArr(10,17,16,17));
+    objs.push(new WallArr(13,15,15,15));
+    objs.push(new WallArr(10,19,15,19));
+    objs.push(new WallArr(10,20,10,21));
+    objs.push(new WallArr(10,18,10,18));
+    objs.push(new WallArr(6,22,6,22));
+    objs.push(new WallArr(8,22,10,22));
+    objs.push(new WallArr(12,22,13,22));
+    objs.push(new WallArr(15,23,15,24));
+    objs.push(new WallArr(15,16,15,16));
+    objs.push(new GoalArr(16,24,16,24));
+    var wm = new Maze();
+	  wm.setSize(17,25);
+	  wm.setStart( 3,3);
+		wm.addObjs(objs);
+		wm.initPoints();
+
 
     //Josh's maze
     objs = [];
-    objs.push(new Wall(2,2,3,2));
-    objs.push(new Wall(6,2,6,2));
-    objs.push(new Wall(2,5,5,7));
-    objs.push(new Wall(2,4,2,4));
-    objs.push(new Wall(4,4,5,4));
-    objs.push(new Wall(7,4,7,7));
-    objs.push(new Wall(8,7,13,7));
-    objs.push(new Wall(9,3,10,5));
-    objs.push(new Wall(11,3,11,4));
-    objs.push(new Wall(13,4,13,6));
-    objs.push(new Wall(14,4,15,4));
-    objs.push(new Wall(15,5,15,7));
-    objs.push(new Wall(3,9,4,11));
-    objs.push(new Wall(6,9,12,9));
-    objs.push(new Wall(14,9,15,9));
-    objs.push(new Wall(6,11,7,11));
-    objs.push(new Wall(9,10,9,12));
-    objs.push(new Wall(11,11,12,14));
-    objs.push(new Wall(14,11,15,14));
-    objs.push(new Wall(2,12,5,12));
-    objs.push(new Wall(6,13,9,14));
-    objs.push(new Wall(10,14,10,14));
-    objs.push(new Wall(2,14,2,14));
-    objs.push(new Wall(4,14,4,16));
-    objs.push(new Wall(3,16,3,16));
-    objs.push(new Wall(6,12,6,12));
-    objs.push(new Wall(6,16,6,16));
-    objs.push(new Wall(12,8,12,8));
-    objs.push(new Wall(13,11,13,11));
-    objs.push(new Wall(9,16,10,16));
-    objs.push(new Wall(13,16,16,16));
-    objs.push(new Bonus(11,5));
-    objs.push(new Bonus(13,8));
-    objs.push(new Bonus(11,16));
-    objs.push(new Goal(2,16,2,16));
-    var jm = new Maze(17,17, 2,8, 0, 0, objs);
+    objs.push(new WallArr(2,2,3,2));
+    objs.push(new WallArr(6,2,6,2));
+    objs.push(new WallArr(2,5,5,7));
+    objs.push(new WallArr(2,4,2,4));
+    objs.push(new WallArr(4,4,5,4));
+    objs.push(new WallArr(7,4,7,7));
+    objs.push(new WallArr(8,7,13,7));
+    objs.push(new WallArr(9,3,10,5));
+    objs.push(new WallArr(11,3,11,4));
+    objs.push(new WallArr(13,4,13,6));
+    objs.push(new WallArr(14,4,15,4));
+    objs.push(new WallArr(15,5,15,7));
+    objs.push(new WallArr(3,9,4,11));
+    objs.push(new WallArr(6,9,12,9));
+    objs.push(new WallArr(14,9,15,9));
+    objs.push(new WallArr(6,11,7,11));
+    objs.push(new WallArr(9,10,9,12));
+    objs.push(new WallArr(11,11,12,14));
+    objs.push(new WallArr(14,11,15,14));
+    objs.push(new WallArr(2,12,5,12));
+    objs.push(new WallArr(6,13,9,14));
+    objs.push(new WallArr(10,14,10,14));
+    objs.push(new WallArr(2,14,2,14));
+    objs.push(new WallArr(4,14,4,16));
+    objs.push(new WallArr(3,16,3,16));
+    objs.push(new WallArr(6,12,6,12));
+    objs.push(new WallArr(6,16,6,16));
+    objs.push(new WallArr(12,8,12,8));
+    objs.push(new WallArr(13,11,13,11));
+    objs.push(new WallArr(9,16,10,16));
+    objs.push(new WallArr(13,16,16,16));
+    objs.push(new BonusArr(11,5));
+    objs.push(new BonusArr(13,8));
+    objs.push(new BonusArr(11,16));
+    objs.push(new GoalArr(2,16,2,16));
+    var jm = new Maze();
+	  jm.setSize(17,17);
+	  jm.setStart( 2,8);
+		jm.addObjs(objs);
+		jm.initPoints();
 
     //Level 1
     objs = [];
-    objs.push(new Wall(6,6,6,10));
-    objs.push(new Wall(7,10,12,10));
-    objs.push(new Goal(7,20,9,20));
-    var l1 = new Maze(20,20, 2, 2, 0, 0, objs);
+    objs.push(new WallArr(6,6,6,10));
+    objs.push(new WallArr(7,10,12,10));
+    objs.push(new GoalArr(7,20,9,20));
+    //var l1 = new Maze(20,20, 2, 2, 0, 0, objs);
+    var l1 = new Maze();
+	  l1.setSize(20,20);
+	  l1.setStart(2,2);
+		l1.addObjs(objs);
+		l1.initPoints();
 
     //First walls
     objs = [];
-    objs.push(new Wall(2,6,9,6));
-    objs.push(new Wall(12,6,14,6));
-    objs.push(new Wall(12,7,12,11));
-    objs.push(new Wall(11,11,5,11));
-    objs.push(new Goal(15,7,15,8));
-    var fw = new Maze(15,15, 2, 2, 0, 0, objs);
+    objs.push(new WallArr(2,6,9,6));
+    objs.push(new WallArr(12,6,14,6));
+    objs.push(new WallArr(12,7,12,11));
+    objs.push(new WallArr(11,11,5,11));
+    objs.push(new GoalArr(15,7,15,8));
+    var fw = new Maze();
+	  fw.setSize(15,15);
+	  fw.setStart( 2,2);
+		fw.addObjs(objs);
+		fw.initPoints();
+
+
 
     //Impossible start
     objs = [];
-    objs.push(new Wall(2,2,2,4));
-    objs.push(new Wall(2,3,2,14));
-    objs.push(new Wall(3,14,3,14));
-    objs.push(new Wall(4,4,11,4));
-    objs.push(new Wall(4,12,11,12));
-    objs.push(new Wall(6,3,6,3));
-    objs.push(new Wall(11,5,11,11));
-    objs.push(new Wall(9,6,9,9));
-    objs.push(new Wall(6,7,6,9));
-    objs.push(new Wall(7,7,7,7));
-    objs.push(new Wall(7,9,7,9));
-    objs.push(new Goal(15,8,15,8));
-    objs.push(new Bonus(9,5));        
-    objs.push(new Bonus(9,10));       
-    objs.push(new Bonus(7,3)); 
-    var is = new Maze(15,15, 7, 8, 0, 0, objs);
+    objs.push(new WallArr(2,2,2,4));
+    objs.push(new WallArr(2,3,2,14));
+    objs.push(new WallArr(3,14,3,14));
+    objs.push(new WallArr(4,4,11,4));
+    objs.push(new WallArr(4,12,11,12));
+    objs.push(new WallArr(6,3,6,3));
+    objs.push(new WallArr(11,5,11,11));
+    objs.push(new WallArr(9,6,9,9));
+    objs.push(new WallArr(6,7,6,9));
+    objs.push(new WallArr(7,7,7,7));
+    objs.push(new WallArr(7,9,7,9));
+    objs.push(new GoalArr(15,8,15,8));
+    objs.push(new BonusArr(9,5));        
+    objs.push(new BonusArr(9,10));       
+    objs.push(new BonusArr(7,3)); 
+    //var is = new Maze(15,15, 7, 8, 0, 0, objs);
+    var is = new Maze();
+	  is.setSize(15,15);
+	  is.setStart( 7,8);
+		is.addObjs(objs);
+		is.initPoints();
 
     //Spiral
     objs = [];
-    objs.push(new Wall(3,3,3,10));
-    objs.push(new Wall(4,3,10,3));
-    objs.push(new Wall(10,4,10,9));
-    objs.push(new Wall(9,9,5,9));
-    objs.push(new Wall(5,8,5,5));
-    objs.push(new Wall(6,5,8,5));
-    objs.push(new Wall(8,6,8,7));
-    objs.push(new Wall(7,7,7,7));
-    objs.push(new Goal(7,6,7,6));
+    objs.push(new WallArr(3,3,3,10));
+    objs.push(new WallArr(4,3,10,3));
+    objs.push(new WallArr(10,4,10,9));
+    objs.push(new WallArr(9,9,5,9));
+    objs.push(new WallArr(5,8,5,5));
+    objs.push(new WallArr(6,5,8,5));
+    objs.push(new WallArr(8,6,8,7));
+    objs.push(new WallArr(7,7,7,7));
+    objs.push(new GoalArr(7,6,7,6));
+    //var sm = new Maze(12,11, 2, 10, 0, 0, objs);
     var sm = new Maze(12,11, 2, 10, 0, 0, objs);
+	  sm.setSize(12,11);
+	  sm.setStart( 2,10);
+		sm.addObjs(objs);
+		sm.initPoints();
 
     //X
     objs = []
-    objs.push(new Wall(2,2,2,2));
-    objs.push(new Wall(3,3,3,3));
-    objs.push(new Wall(4,4,4,4));
-    objs.push(new Wall(5,5,5,5));
-    objs.push(new Wall(7,7,7,7));
-    objs.push(new Wall(8,8,8,8));
-    objs.push(new Wall(10,10,10,10));
-    objs.push(new Wall(11,11,11,11));
-    objs.push(new Wall(10,3,10,3));
-    objs.push(new Wall(9,4,9,4));
-    objs.push(new Wall(8,5,8,5));
-    objs.push(new Wall(7,6,7,6));
-    objs.push(new Wall(6,7,6,7));
-    objs.push(new Wall(5,8,5,8));
-    objs.push(new Wall(4,9,4,9));
-    objs.push(new Wall(3,10,3,10));
-    objs.push(new Wall(2,11,2,11));
-    objs.push(new Goal(3,11,3,11));
-    var xm = new Maze(12,12, 2, 10, 0, 0, objs);
+    objs.push(new WallArr(2,2,2,2));
+    objs.push(new WallArr(3,3,3,3));
+    objs.push(new WallArr(4,4,4,4));
+    objs.push(new WallArr(5,5,5,5));
+    objs.push(new WallArr(7,7,7,7));
+    objs.push(new WallArr(8,8,8,8));
+    objs.push(new WallArr(10,10,10,10));
+    objs.push(new WallArr(11,11,11,11));
+    objs.push(new WallArr(10,3,10,3));
+    objs.push(new WallArr(9,4,9,4));
+    objs.push(new WallArr(8,5,8,5));
+    objs.push(new WallArr(7,6,7,6));
+    objs.push(new WallArr(6,7,6,7));
+    objs.push(new WallArr(5,8,5,8));
+    objs.push(new WallArr(4,9,4,9));
+    objs.push(new WallArr(3,10,3,10));
+    objs.push(new WallArr(2,11,2,11));
+    objs.push(new GoalArr(3,11,3,11));
+    //var xm = new Maze(12,12, 2, 10, 0, 0, objs);
+    var xm = new Maze();
+	  xm.setSize(12,12);
+	  xm.setStart(2,10);
+		xm.addObjs(objs);
+		xm.initPoints();
 
     //Falldown
     objs = []
-    objs.push(new Wall(3,5,3,7));
-    objs.push(new Wall(5,2,5,4));
-    objs.push(new Wall(5,2,5,4));
-    objs.push(new Wall(7,5,7,7));
-    objs.push(new Wall(8,5,8,7));
-    objs.push(new Goal(8,6,8,6));
-    var fd = new Maze(10,8,2,7, 0, 0, objs);
+    objs.push(new WallArr(3,5,3,7));
+    objs.push(new WallArr(5,2,5,4));
+    objs.push(new WallArr(5,2,5,4));
+    objs.push(new WallArr(7,5,7,7));
+    objs.push(new WallArr(8,5,8,7));
+    objs.push(new GoalArr(8,6,8,6));
+    //var fd = new Maze(10,8,2,7, 0, 0, objs);
+    var fd = new Maze();
+	  fd.setSize(10,8);
+	  fd.setStart(2,7);
+		fd.addObjs(objs);
+		fd.initPoints();
 
     //corridors
     objs = []
-    objs.push(new Wall(3,5,13,5));
-    objs.push(new Wall(2,7,12,7));
-    objs.push(new Wall(3,9,13,9));
-    objs.push(new Goal(6,11,6,11));          
-    var cm = new Maze(14,11,13,3, 0, 0, objs);       
+    objs.push(new WallArr(3,5,13,5));
+    objs.push(new WallArr(2,7,12,7));
+    objs.push(new WallArr(3,9,13,9));
+    objs.push(new GoalArr(6,11,6,11));          
+    //var cm = new Maze(14,11,13,3, 0, 0, objs);       
+    var cm = new Maze();       
+	  cm.setSize(14,11);
+	  cm.setStart(13,3);
+		cm.addObjs(objs);
+		cm.initPoints();
          
     //Maginot        
     objs = []        
-    objs.push(new Wall(3,3,3,3));        
-    objs.push(new Wall(5,3,5,3));        
-    objs.push(new Wall(7,3,7,3));        
-    objs.push(new Wall(9,3,9,3));        
-    objs.push(new Wall(2,5,2,5));        
-    objs.push(new Wall(4,5,4,5));        
-    objs.push(new Wall(6,5,6,5));        
-    objs.push(new Wall(8,5,8,5));        
-    objs.push(new Wall(3,7,3,7));        
-    objs.push(new Wall(5,7,5,7));        
-    objs.push(new Wall(7,7,7,7));        
-    objs.push(new Wall(9,7,9,7));        
-    objs.push(new Bonus(2,4));        
-    objs.push(new Bonus(2,6));        
-    objs.push(new Bonus(9,8));        
-    objs.push(new Goal(10,9,10,9));          
-    var mg = new Maze(10,10,9,2, 0, 0, objs);        
+    objs.push(new WallArr(3,3,3,3));        
+    objs.push(new WallArr(5,3,5,3));        
+    objs.push(new WallArr(7,3,7,3));        
+    objs.push(new WallArr(9,3,9,3));        
+    objs.push(new WallArr(2,5,2,5));        
+    objs.push(new WallArr(4,5,4,5));        
+    objs.push(new WallArr(6,5,6,5));        
+    objs.push(new WallArr(8,5,8,5));        
+    objs.push(new WallArr(3,7,3,7));        
+    objs.push(new WallArr(5,7,5,7));        
+    objs.push(new WallArr(7,7,7,7));        
+    objs.push(new WallArr(9,7,9,7));        
+    objs.push(new BonusArr(2,4));        
+    objs.push(new BonusArr(2,6));        
+    objs.push(new BonusArr(9,8));        
+    objs.push(new GoalArr(10,9,10,9));          
+    //var mg = new Maze(10,10,9,2, 0, 0, objs);        
+    var mg = new Maze();        
+	  mg.setSize(10,10);
+	  mg.setStart(9,2);
+		mg.addObjs(objs);
+		mg.initPoints();
          
     //Carpal Tunnel          
     objs = []        
-    objs.push(new Wall(2,3,5,3));        
-    objs.push(new Wall(7,2,8,2));        
-    objs.push(new Wall(5,4,10,4));       
-    objs.push(new Wall(10,3,10,3));          
-    objs.push(new Wall(3,5,3,8));        
-    objs.push(new Wall(5,4,5,6));        
-    objs.push(new Wall(7,5,7,8));        
-    objs.push(new Wall(9,6,9,6));        
-    objs.push(new Wall(9,6,9,6));        
-    objs.push(new Wall(6,8,10,8));       
-    objs.push(new Wall(10,9,10,9));          
-    objs.push(new Wall(7,10,8,10));          
-    objs.push(new Wall(4,9,5,9));        
-    objs.push(new Wall(2,10,2,10));          
-    objs.push(new Bonus(8,6));        
-    objs.push(new Bonus(10,6));       
-    objs.push(new Bonus(5,8));        
-    objs.push(new Goal(6,5,6,5));        
-    var ct = new Maze(12,11,2,2, 0, 0, objs); 
+    objs.push(new WallArr(2,3,5,3));        
+    objs.push(new WallArr(7,2,8,2));        
+    objs.push(new WallArr(5,4,10,4));       
+    objs.push(new WallArr(10,3,10,3));          
+    objs.push(new WallArr(3,5,3,8));        
+    objs.push(new WallArr(5,4,5,6));        
+    objs.push(new WallArr(7,5,7,8));        
+    objs.push(new WallArr(9,6,9,6));        
+    objs.push(new WallArr(9,6,9,6));        
+    objs.push(new WallArr(6,8,10,8));       
+    objs.push(new WallArr(10,9,10,9));          
+    objs.push(new WallArr(7,10,8,10));          
+    objs.push(new WallArr(4,9,5,9));        
+    objs.push(new WallArr(2,10,2,10));          
+    objs.push(new BonusArr(8,6));        
+    objs.push(new BonusArr(10,6));       
+    objs.push(new BonusArr(5,8));        
+    objs.push(new GoalArr(6,5,6,5));        
+    //var ct = new Maze(12,11,2,2, 0, 0, objs); 
+    var ct = new Maze(); 
+	  ct.setSize(12,11);
+	  ct.setStart(2,2);
+		ct.addObjs(objs);
+		ct.initPoints();
     
     LEVELS.push(l1);
     LEVELS.push(fw);

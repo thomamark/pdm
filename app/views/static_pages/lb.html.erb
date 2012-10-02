@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <% content_for :header do %>
-	 <title>Panda Dragon Maze - Level designer</title>
+	 <title>Panda Dragon Maze - Level builder</title>
 		<style type="text/css">
 			.toolbar {
 				width: 100%;
@@ -32,10 +32,14 @@
 				background-color: #99FFFF;
 			}
 
+			#game-content {
+				position: relative;
+				clear: both;
+			}
 			.canvas {
-              position: relative;
-              top: auto;
-              left: auto;
+				position: absolute;
+				top: auto;
+				left: auto;
 			}
 
 		</style>
@@ -44,40 +48,95 @@
 			//var SPRITE_SCALE = 1;
 			//var GRID_W = 32*SPRITE_SCALE;
 			//var GRID_H = 16*SPRITE_SCALE;
-            INIT_GAME = false;
+      INIT_GAME = false; //var defined in maze.js which
 			var selectedId;
 			var selectedImg;
+			var selectedObj;
 			var MAX_PER_MAP = {"dragon" : 1};
 			var COUNTS = {};
-
-            var IMGS;
+      var IMGS;
+			var OBJS;
+			var oldR;
+			var oldC;
            
 			function select() {
 				$('li').each(function (i, el) { $(el).removeClass('selected');});
-				selectedId = $(this).id;
-				selectedImg = IMGS[$(this).id];
+				selectedId = this.id;
+				selectedImg = IMGS[this.id];
+				selectedObj = OBJS[this.id];
 				$(this).addClass('selected');
 			}
 
-            $(document).ready( 
-                init(function () {
-                  //wait until images are actually loaded
+			function findPos(obj) {
+				    var curleft = 0, curtop = 0;
+				    if (obj.offsetParent) {
+				        do {
+				            curleft += obj.offsetLeft;
+				            curtop += obj.offsetTop;
+				        } while (obj = obj.offsetParent);
+				        return { x: curleft, y: curtop };
+				    }
+				    return undefined;
+			}
 
-                  IMGS = {
-                    "wall" : WALL_BLOCK_IMG,
-                    "panda" : PANDA_IMG,
-                    "goal" : PORTAL_IMG,
-                    "dragon" : HEAD_DOWN_IMG, 
-                    "delete" : DELETE_IMG};
+      $(document).ready( function () {
+					maze = new Maze();
+					maze.setSize(31, 28);
+
+					OBJS = {
+            "wall" : WallPoint,
+            "panda" : BonusPoint,
+            "goal" : GoalPoint,
+            "dragon" : StartPoint
+						}
+
+        gameCanvas = document.getElementById('maze-canvas');
+        bgCanvas = document.getElementById('maze-canvas-background');
+				tileCanvas = document.getElementById('tile-canvas');
+        gameStage = gameCanvas.getContext("2d");
+        bgStage = bgCanvas.getContext("2d");
+        tileStage = tileCanvas.getContext("2d");
+					
+			  //$('#maze-canvas').click(function(e) {
+					//alert(curR + " " + curC);
+				//});
+
+			  $('#maze-canvas').mousemove(function(e) {
+					    var pos = findPos(this);
+					    var x = e.pageX - pos.x;
+					    var y = e.pageY - pos.y;
+							var curC = Math.ceil(x/GRID_W);
+							var curR = Math.ceil(y/GRID_H);
+							if (selectedId && !(curR == oldR && curC == oldC))	{
+								//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+                //maze.render();
+								//gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
+								renderObject(new selectedObj(curR, curC), gameStage);
+								oldR = curR;
+								oldC = curC;
+							}
+//					    var coordinateDisplay = "x=" + x + ", y=" + y;
+//					    writeCoordinateDisplay(coordinateDisplay);
+					});
+			  
+        init(function () {
+          //wait until images are actually loaded
+          IMGS = {
+            "wall" : WALL_BLOCK_IMG,
+            "panda" : PANDA_IMG,
+            "goal" : PORTAL_IMG,
+            "dragon" : HEAD_DOWN_IMG, 
+            "delete" : DELETE_IMG
+						}
 
 
-				  $('li').each( function (i, el) {
+				  	$('li').each( function (i, el) {
 				      $(el).click(select);
-                      $(el).append("<img src='"+IMGS[el.id].src+"' />");
-					  COUNTS[el.id] = 0;
-				   });
-                 })
-				);
+              $(el).append("<img src='"+IMGS[el.id].src+"' />");
+					  	COUNTS[el.id] = 0;
+				   	});
+          })
+				});
 		</script>
 	<!-- what matters:
 				shared code
@@ -114,12 +173,16 @@
 
 		<div class="toolbar">
 			<ul class="toolbar">
-                <!-- Images added via js  -->
+        <!-- Images added via js  -->
 				<li id="wall"></li>
 				<li id="panda"></li>
 				<li id="goal"></li>
-                <li id="dragon"></li>
+        <li id="dragon"></li>
 				<li id="delete"></li>
 			</ul>
 		</div>
-	    <canvas class="canvas" id="tile-canvas">
+        <div id="game-content">
+                <canvas class="canvas" id="tile-canvas" style="z-index: 1;"></canvas>
+                <canvas class="canvas" id="maze-canvas-background" style="z-index: 2;"></canvas>
+                <canvas class="canvas" id="maze-canvas" style="z-index: 3;"></canvas>
+        </div>
