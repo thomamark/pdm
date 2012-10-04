@@ -58,6 +58,7 @@
 			var OBJS;
 			var oldR =-1;
 			var oldC = -1;
+			var MOUSE_DOWN = false;
 			//var canvasX = -1;
 			//var canvasY = -1;
            
@@ -83,7 +84,6 @@
 
       $(document).ready( function () {
 					maze = new Maze();
-					maze.setSize(31, 28);
 
 					OBJS = {
             "wall" : WallPoint,
@@ -114,9 +114,31 @@
         $('#maze-canvas-background').width(mcpx);
         $('#tile-canvas').height(mrpx);
         $('#tile-canvas').width(mcpx);
+				
+//				var mazeClick = function (e, d) {
+//					if (!maze.hasPoint(curR,curC)) {
+//						maze.addPoint(new selectedObj(curR, curC));
+//						maze.fixWallImages();
+//						bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+//          	maze.render(bgStage);
+//					}
+//				}
+	
 					
-			  $('#maze-canvas').click(function(e) {
-					alert(curR + " " + curC);
+			  $('#maze-canvas').mousedown(function(e) {
+						MOUSE_DOWN = true;
+					  $('#maze-canvas').trigger('mazeClick');
+				});
+			  $('#maze-canvas').mouseup(function(e) {MOUSE_DOWN = false;});
+				
+			  $('#maze-canvas').bind('mazeClick', function(e) {
+			  //$('#maze-canvas').click(function(e) {
+					if (!maze.hasPoint(curR,curC)) {
+						maze.addPoint(new selectedObj(curR, curC));
+						maze.fixWallImages();
+						bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+          	maze.render(bgStage);
+					}
 				});
 
 			  $('#maze-canvas').mousemove(function(e) {
@@ -130,12 +152,13 @@
 							//$('#cr').text(curR);
 							//$('#cc').text(curC);
 							if (selectedId && !(curR == oldR && curC == oldC))	{
-								bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+								//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
                 //maze.render();
 								gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
 								renderObject(new selectedObj(curR, curC), gameStage);
 								oldR = curR;
 								oldC = curC;
+								if (MOUSE_DOWN) {$('#maze-canvas').trigger('mazeClick');}
 							}
 //					    var coordinateDisplay = "x=" + x + ", y=" + y;
 //					    writeCoordinateDisplay(coordinateDisplay);
@@ -151,6 +174,8 @@
             "delete" : DELETE_IMG
 						}
 
+					  maze.setSize(MAX_ROWS, MAX_COLS);
+          	maze.render(bgStage);
 
 				  	$('li').each( function (i, el) {
 				      $(el).click(select);

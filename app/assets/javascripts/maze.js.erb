@@ -8,7 +8,7 @@
 /*************************************/
 
 /* Graphics */
-var SPRITE_SCALE = 1;
+var SPRITE_SCALE = 2;
 var BASE_W = 32;
 var BASE_H= 16;
 var GRID_W = 32*SPRITE_SCALE;
@@ -247,6 +247,7 @@ function Maze () {
 Maze.prototype.setSize = function (r,c) {
 	this.rows = r;
 	this.cols = c;
+	this.initPoints();
 }
 
 /* Sets the Dragon's starting point */
@@ -282,6 +283,28 @@ Maze.prototype.complete = function () {
    this.doneBonuses = this.gotBonuses;
 }
 
+Maze.prototype.addBorders = function () {
+    this.objs.unshift(new WallArr(1,1,1,this.cols));
+    this.objs.unshift(new WallArr(this.rows,1,this.rows,this.cols));
+    this.objs.unshift(new WallArr(2,1,this.rows-1,1));
+    this.objs.unshift(new WallArr(2,this.cols,this.rows-1,this.cols));
+//	var createBorder = function () {
+//    this.objs.unshift(new WallArr(1,1,1,this.cols));
+//    this.objs.unshift(new WallArr(this.rows,1,this.rows,this.cols));
+//    this.objs.unshift(new WallArr(2,1,this.rows-1,1));
+//    this.objs.unshift(new WallArr(2,this.cols,this.rows-1,this.cols));
+//	}
+//	try { 
+//		createBorder();
+//	} catch (err) { 
+//		this.initPoints();
+//		createBorder();
+//	}
+}
+
+Maze.prototype.removeBorders = function () {
+}
+
 Maze.prototype.initPoints = function() {
 	this.points = [];
     this.gotBonuses = 0;
@@ -292,10 +315,11 @@ Maze.prototype.initPoints = function() {
 	}
 
 	//Add borders
-    this.objs.unshift(new WallArr(1,1,1,this.cols));
-    this.objs.unshift(new WallArr(this.rows,1,this.rows,this.cols));
-    this.objs.unshift(new WallArr(2,1,this.rows-1,1));
-    this.objs.unshift(new WallArr(2,this.cols,this.rows-1,this.cols));
+	this.addBorders();
+//    this.objs.unshift(new WallArr(1,1,1,this.cols));
+//    this.objs.unshift(new WallArr(this.rows,1,this.rows,this.cols));
+//    this.objs.unshift(new WallArr(2,1,this.rows-1,1));
+//    this.objs.unshift(new WallArr(2,this.cols,this.rows-1,this.cols));
 
     for (var i=0; i<this.objs.length; i++) {
             var o = this.objs[i];
@@ -306,6 +330,10 @@ Maze.prototype.initPoints = function() {
 
     this.fixWallImages();
 	
+}
+
+Maze.prototype.hasPoint = function(r, c) {
+	return this.points[r-1][c-1];
 }
 
 Maze.prototype.fixWallImages = function() {
@@ -355,6 +383,10 @@ Maze.prototype.addObjs= function(arr) {
 	this.objs = this.objs.concat(arr);
 }
 
+Maze.prototype.addObj= function(obj) {
+	this.objs.push(obj)
+}
+
 // Adds a point object to this Maze
 Maze.prototype.addPoint = function(pt) {
 	this.points[pt.r-1][pt.c-1]=pt;
@@ -372,7 +404,7 @@ Maze.prototype.isOn = function (r, c) {
         }
 }
 
-Maze.prototype.render = function () {
+Maze.prototype.render = function (stage) {
 	for (var i =0; i<this.rows; i++) {
 		for (var j =0; j<this.cols; j++) {
             //render the background tiles the first time we render the maze.
@@ -382,7 +414,7 @@ Maze.prototype.render = function () {
                     tileStage);
             }
 			if (this.points[i][j]) {
-				renderObject(this.points[i][j], bgStage);
+				renderObject(this.points[i][j], stage);
 			}
 		}
 	}
@@ -620,7 +652,7 @@ function maze_init(){
         maze.initPoints();
     }
 
-	maze.render();
+	maze.render(bgStage);
 	game_state = GAME_STATES.READY;
     printState();
     renderScore();
@@ -1026,7 +1058,7 @@ function onKeyDown($evt){
 	if (game_state==GAME_STATES.READY) {
 		gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
 		//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-		//maze.render();
+		//maze.render(bgStage);
 		renderObject(dragon, gameStage);
 		game_state=GAME_STATES.PLAYING;
 	}
@@ -1102,7 +1134,7 @@ function printState () {
 
 function update() {
     //gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
-    //maze.render();
+    //maze.render(bgStage);
 
     //Set the right head image depending on the direction
     switch(dir) {
