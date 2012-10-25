@@ -44,6 +44,15 @@ var PILLAR_IMG;
 var VERTICAL_WALL_IMG;
 var HORIZONTAL_WALL_IMG;
 var DELETE_IMG;
+var WALL_9S_TL_IMG;
+var WALL_9S_TC_IMG;
+var WALL_9S_TR_IMG;
+var WALL_9S_ML_IMG;
+var WALL_9S_MC_IMG;
+var WALL_9S_MR_IMG;
+var WALL_9S_BL_IMG;
+var WALL_9S_BC_IMG;
+var WALL_9S_BR_IMG;
 
 var POST_ASSET_LOAD_FN; //hacky way to get images to load in lb
 
@@ -349,96 +358,169 @@ Maze.prototype.fixWallImages = function() {
                 console.log("error! i="+i+" j="+j);
             }
 
-           if ((i!=0 && i!=this.rows-1) && 
-                (this.points[i-1][j]!=undefined && 
-                 this.points[i-1][j].obj_type==WALL_TYPE && 
-                 this.points[i+1][j]!=undefined &&
-                 this.points[i+1][j].obj_type==WALL_TYPE &&
-                 (j==0 || this.points[i][j-1]==undefined || 
-                    this.points[i][j-1].obj_type!=WALL_TYPE) && 
-                 (j==this.cols-1||this.points[i][j+1]==undefined || 
-                    this.points[i][j+1].obj_type!=WALL_TYPE))) {
+
+					//Build 9-slice
+					if (this.isType(i-1,j-1,WALL_TYPE) &&
+							this.isType(i-1,j,WALL_TYPE) &&
+							this.isType(i-1,j+1,WALL_TYPE) &&
+							this.isType(i,j-1,WALL_TYPE) &&
+							this.isType(i,j,WALL_TYPE) &&
+							this.isType(i,j+1,WALL_TYPE) &&
+							this.isType(i+1,j-1,WALL_TYPE) &&
+							this.isType(i+1,j,WALL_TYPE) &&
+							this.isType(i+1,j+1,WALL_TYPE)) {
+								//Middle-center wall
+								this.points[i][j].img=WALL_9S_MC_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							this.isType(i-1,j-1,WALL_TYPE) &&
+							this.isType(i-1,j,WALL_TYPE) &&
+							this.isType(i-1,j+1,WALL_TYPE) &&
+							this.isType(i,j-1,WALL_TYPE) &&
+							this.isType(i,j,WALL_TYPE) &&
+							this.isType(i,j+1,WALL_TYPE) &&
+							!(this.isType(i+1,j-1,WALL_TYPE) &&
+								this.isType(i+1,j,WALL_TYPE)) &&
+							!(this.isType(i+1,j+1,WALL_TYPE) && 
+								this.isType(i+1,j,WALL_TYPE))) {
+								//Bottom-center wall
+								this.points[i][j].img=WALL_9S_BC_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							!(this.isType(i-1,j-1,WALL_TYPE) &&
+								this.isType(i-1,j,WALL_TYPE)) &&
+							!(this.isType(i-1,j+1,WALL_TYPE) &&
+								this.isType(i-1,j,WALL_TYPE)) &&
+							this.isType(i,j-1,WALL_TYPE) &&
+							this.isType(i,j,WALL_TYPE) &&
+							this.isType(i,j+1,WALL_TYPE) &&
+							this.isType(i+1,j-1,WALL_TYPE) &&
+							this.isType(i+1,j,WALL_TYPE) &&
+							this.isType(i+1,j+1,WALL_TYPE)) {
+								//top-center wall
+								this.points[i][j].img=WALL_9S_TC_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							!(this.isType(i-1,j-1,WALL_TYPE) &&
+								this.isType(i,j-1,WALL_TYPE)) &&
+							this.isType(i-1,j,WALL_TYPE) &&
+							this.isType(i-1,j+1,WALL_TYPE) &&
+							this.isType(i,j,WALL_TYPE) &&
+							this.isType(i,j+1,WALL_TYPE) &&
+							!(this.isType(i+1,j-1,WALL_TYPE) &&
+								this.isType(i,j-1,WALL_TYPE)) &&
+							this.isType(i+1,j,WALL_TYPE) &&
+							this.isType(i+1,j+1,WALL_TYPE)) {
+								//middle-left wall
+								this.points[i][j].img=WALL_9S_ML_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							this.isType(i-1,j,WALL_TYPE) &&
+							this.isType(i-1,j+1,WALL_TYPE) &&
+							!(this.isType(i-1,j-1,WALL_TYPE) &&
+							  this.isType(i,j-1,WALL_TYPE)) &&
+							this.isType(i,j,WALL_TYPE) &&
+							this.isType(i,j+1,WALL_TYPE) &&
+							!(this.isType(i+1,j,WALL_TYPE) &&
+							  this.isType(i+1,j+1,WALL_TYPE))) {
+								//bottom-left wall
+								this.points[i][j].img=WALL_9S_BL_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							!(this.isType(i-1,j,WALL_TYPE) &&
+								this.isType(i-1,j+1,WALL_TYPE)) &&
+							!(this.isType(i,j-1,WALL_TYPE) &&
+								this.isType(i+1,j-1,WALL_TYPE)) &&
+							this.isType(i,j,WALL_TYPE) &&
+							this.isType(i,j+1,WALL_TYPE) &&
+							this.isType(i+1,j,WALL_TYPE) &&
+							this.isType(i+1,j+1,WALL_TYPE)) {
+								//top-left wall
+								this.points[i][j].img=WALL_9S_TL_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							this.isType(i-1,j-1,WALL_TYPE) &&
+							this.isType(i-1,j,WALL_TYPE) &&
+							!(this.isType(i-1,j+1,WALL_TYPE) &&
+								this.isType(i,j+1,WALL_TYPE)) &&
+							this.isType(i,j-1,WALL_TYPE) &&
+							this.isType(i,j,WALL_TYPE) &&
+							this.isType(i+1,j-1,WALL_TYPE) &&
+							this.isType(i+1,j,WALL_TYPE) &&
+							!(this.isType(i,j+1,WALL_TYPE) &&
+							this.isType(i+1,j+1,WALL_TYPE))) {
+								//middle-right wall
+								this.points[i][j].img=WALL_9S_MR_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							this.isType(i-1,j-1,WALL_TYPE) &&
+							this.isType(i-1,j,WALL_TYPE) &&
+							!(this.isType(i-1,j+1,WALL_TYPE) &&
+								this.isType(i,j+1,WALL_TYPE)) &&
+							this.isType(i,j-1,WALL_TYPE) &&
+							this.isType(i,j,WALL_TYPE) &&
+							!(this.isType(i+1,j-1,WALL_TYPE) &&
+								this.isType(i+1,j,WALL_TYPE))) {
+								//bottom-right wall
+								this.points[i][j].img=WALL_9S_BR_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (
+							!(this.isType(i-1,j-1,WALL_TYPE) &&
+								this.isType(i-1,j,WALL_TYPE)) &&
+							this.isType(i,j-1,WALL_TYPE) &&
+							this.isType(i,j,WALL_TYPE) &&
+							!(this.isType(i,j+1,WALL_TYPE) &&
+								this.isType(i+1,j+1,WALL_TYPE)) &&
+							this.isType(i+1,j-1,WALL_TYPE) &&
+							this.isType(i+1,j,WALL_TYPE)) {
+								//top-right wall
+								this.points[i][j].img=WALL_9S_TR_IMG;
+	              this.points[i][j].yOffset=0;
+							} else if (this.isType(i,j-1,WALL_TYPE) &&
+								this.isType(i, j+1, WALL_TYPE) &&
+								(this.isType(i+1, j, WALL_TYPE) ||
+									this.isType(i-1, j, WALL_TYPE))) {
+											//Fix T-shaped and inverse T-shaped walls
+											this.points[i][j].img=WALL_BLOCK_IMG;
+	                		this.points[i][j].yOffset=0;
+							 } else if (this.isType(i-1,j,WALL_TYPE) && 
+											this.isType(i+1,j,WALL_TYPE) &&
+											(this.isType(i,j-1,WALL_TYPE) ||
+													this.isType(i,j+1,WALL_TYPE))) {
+													//Fix -| and |- walls
+													this.points[i][j].img = WALL_BLOCK_IMG;
+                      		this.points[i][j].yOffset=0;
+							} else if (this.isType(i-1,j,WALL_TYPE) &&
+							  this.isType(i+1,j,WALL_TYPE) &&
+							  !this.isType(i, j-1, WALL_TYPE) &&
+								!this.isType(i,j+1, WALL_TYPE)) {
                     //Fix vertical wall image
                     this.points[i][j].img=VERTICAL_WALL_IMG;
-           } else if ((j!=0 && j!=this.cols-1) &&
-                (this.points[i][j-1]!=undefined && 
-                 this.points[i][j-1].obj_type==WALL_TYPE && 
-                 this.points[i][j+1]!=undefined &&
-                 this.points[i][j+1].obj_type==WALL_TYPE &&
-                 (i==0 || this.points[i-1][j]==undefined || 
-                    this.points[i-1][j].obj_type!=WALL_TYPE) && 
-                 (i==this.rows-1||this.points[i+1][j]==undefined || 
-                    this.points[i+1][j].obj_type!=WALL_TYPE))) {
-                      //Fix horizontal wall image
-                      this.points[i][j].img=HORIZONTAL_WALL_IMG;
-                      this.points[i][j].yOffset=3*SPRITE_SCALE;
-                 }
-
-					//Fix T-shaped and inverse T-shaped walls
-					if ( j-1 > 0 && j+1 < this.cols &&
-							 this.points[i][j-1]!= undefined &&
-							 this.points[i][j-1].obj_type == WALL_TYPE &&
-							 this.points[i][j+1]!= undefined &&
-							 this.points[i][j+1].obj_type == WALL_TYPE &&
-							 (	(i-1 > 0 && 
-										this.points[i-1][j]!= undefined &&
-										this.points[i-1][j].obj_type == WALL_TYPE) ||
-									(i+1 < this.rows &&
-										this.points[i+1][j]!= undefined &&
-										this.points[i+1][j].obj_type == WALL_TYPE))) {
-								this.points[i][j].img=WALL_BLOCK_IMG;
-                this.points[i][j].yOffset=0;
-//					if ( i!=this.rows-1 && j != 0 && j != this.cols-1 &&
-//							(this.points[i+1][j-1]!=undefined && 
-//							 this.points[i+1][j-1].obj_type==WALL_TYPE && 
-//							 this.points[i+1][j]!=undefined && 
-//							 this.points[i+1][j].obj_type==WALL_TYPE && 
-//							 this.points[i+1][j+1]!=undefined && 
-//							 this.points[i+1][j+1].obj_type==WALL_TYPE)) {
-//									//Fix upside-down "T"
-//									this.points[i+1][j].img=WALL_BLOCK_IMG;
-//                  this.points[i+1][j].yOffset=0;
-//								} else if ( (i != 0 && j !=0 && j != this.cols-1) &&
-//									(this.points[i-1][j-1]!=undefined && 
-//									 this.points[i-1][j-1].obj_type==WALL_TYPE && 
-//									 this.points[i-1][j]!=undefined && 
-//									 this.points[i-1][j].obj_type==WALL_TYPE && 
-//									 this.points[i-1][j+1]!=undefined && 
-//									 this.points[i-1][j+1].obj_type==WALL_TYPE)) {
-//											//Fix normal "T"
-//											this.points[i-1][j].img=WALL_BLOCK_IMG;
-//                      this.points[i-1][j].yOffset=0;
-										
-							 } else if (i-1 > 0 && i+1 < this.rows &&
-													this.points[i-1][j]!=undefined && 
-													this.points[i-1][j].obj_type==WALL_TYPE && 
-													this.points[i+1][j]!=undefined &&
-													this.points[i+1][j].obj_type==WALL_TYPE &&
-													((j-1 > 0 && 
-															this.points[i][j-1]!=undefined  &&
-															this.points[i][j-1].obj_type==WALL_TYPE) ||
-													 (j+1 < this.cols && 
-															this.points[i][j+1]!=undefined &&
-															this.points[i][j+1].obj_type==WALL_TYPE))) {
-												//Fix -| and |- walls
-												this.points[i][j].img = WALL_BLOCK_IMG;
-                      	this.points[i][j].yOffset=0;
-											} 
-								
-        }
+           	  } else if (this.isType(i,j-1,WALL_TYPE) &&
+								this.isType(i, j+1, WALL_TYPE) &&
+								!this.isType(i-1,j, WALL_TYPE) &&
+								!this.isType(i+1,j, WALL_TYPE)) {
+                    //Fix horizontal wall image
+                    this.points[i][j].img=HORIZONTAL_WALL_IMG;
+                    this.points[i][j].yOffset=3*SPRITE_SCALE;
+                 } else {
+								//default to the pillar wall (in case of deletes
+								this.points[i][j].img = WALL_BLOCK_IMG; 
+	              this.points[i][j].yOffset=0;
+        		}
     }
+  } 
 }
-
 
 /**
 * Given a row, column and and object type, returns true if the point at
-* at (r,c) has obj_type==type
+* at this.points[i][j] has obj_type==type
 * Note that maze rows and columns are not 0-indexed (first row/col is 1,1).
 */
-Maze.prototype.isType = function (r,c,type) {
-	return (r>=0 && r<this.rows && c>=0 && c<this.cols &&
-					this.points[r][c]!=undefined &&
-					this.points[r][c].obj_type==type);
+Maze.prototype.isType = function (i,j,type) {
+	return (i>=0 && i<this.rows && j>=0 && j<this.cols &&
+					this.points[i][j]!=undefined &&
+					this.points[i][j].obj_type==type);
 }
 
 // Adds an array of Point Objects to this Maze
@@ -627,12 +709,34 @@ function loadAssets() {
               "<%= asset_path('tiles_3.png') %>"));
         TILES_IMG_ARRAY.push(createImgAsset("tile_4",
               "<%= asset_path('tiles_4.png') %>"));
+
+				//load wall images
         VERTICAL_WALL_IMG = createImgAsset("vw",
             "<%= asset_path('wall_stright_horizontal.png') %>");
         HORIZONTAL_WALL_IMG = createImgAsset("hw",
             "<%= asset_path('wall_stright_vertical.png') %>");
-	    WALL_BLOCK_IMG = createImgAsset("pillar",
+	    	WALL_BLOCK_IMG = createImgAsset("pillar",
             "<%= asset_path('wall_block.png') %>");
+
+				WALL_9S_TL_IMG = createImgAsset('wall_9s_tl', 
+            "<%= asset_path('wall_9slice_tl.png') %>");
+				WALL_9S_TC_IMG = createImgAsset('wall_9s_tc', 
+				    "<%= asset_path('wall_9slice_tc.png') %>");
+				WALL_9S_TR_IMG= createImgAsset('wall_9s_tr', 
+				    "<%= asset_path('wall_9slice_tr.png') %>");
+				WALL_9S_ML_IMG= createImgAsset('wall_9s_ml', 
+				    "<%= asset_path('wall_9slice_ml.png') %>");
+				WALL_9S_MC_IMG= createImgAsset('wall_9s_mc', 
+				    "<%= asset_path('wall_9slice_mc.png') %>");
+				WALL_9S_MR_IMG= createImgAsset('wall_9s_mr', 
+				    "<%= asset_path('wall_9slice_mr.png') %>");
+				WALL_9S_BL_IMG= createImgAsset('wall_9s_bl', 
+				    "<%= asset_path('wall_9slice_bl.png') %>");
+				WALL_9S_BC_IMG= createImgAsset('wall_9s_bc', 
+				    "<%= asset_path('wall_9slice_bc.png') %>");
+				WALL_9S_BR_IMG= createImgAsset('wall_9s_br', 
+            "<%= asset_path('wall_9slice_br.png') %>");
+
         DELETE_IMG = createImgAsset("delete", 
             "<%= asset_path('delete.png') %>");
 
