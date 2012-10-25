@@ -341,9 +341,9 @@ Maze.prototype.fixWallImages = function() {
         for (var j= 0; j<this.cols;j++) {
            //We only care about walls, so skip everything else
             try {
-           if (!this.points[i][j] || this.points[i][j].obj_type!=WALL_TYPE) {
-                continue;
-            }
+           		if (!this.points[i][j] || this.points[i][j].obj_type!=WALL_TYPE) {
+           		     continue;
+           		 }
             } catch(err) {
                 alert("caught the error");
                 console.log("error! i="+i+" j="+j);
@@ -358,7 +358,7 @@ Maze.prototype.fixWallImages = function() {
                     this.points[i][j-1].obj_type!=WALL_TYPE) && 
                  (j==this.cols-1||this.points[i][j+1]==undefined || 
                     this.points[i][j+1].obj_type!=WALL_TYPE))) {
-                    //Fix horizontal wall image
+                    //Fix vertical wall image
                     this.points[i][j].img=VERTICAL_WALL_IMG;
            } else if ((j!=0 && j!=this.cols-1) &&
                 (this.points[i][j-1]!=undefined && 
@@ -369,12 +369,76 @@ Maze.prototype.fixWallImages = function() {
                     this.points[i-1][j].obj_type!=WALL_TYPE) && 
                  (i==this.rows-1||this.points[i+1][j]==undefined || 
                     this.points[i+1][j].obj_type!=WALL_TYPE))) {
-                      //Fix vertical wall image
+                      //Fix horizontal wall image
                       this.points[i][j].img=HORIZONTAL_WALL_IMG;
                       this.points[i][j].yOffset=3*SPRITE_SCALE;
                  }
+
+					//Fix T-shaped and inverse T-shaped walls
+					if ( j-1 > 0 && j+1 < this.cols &&
+							 this.points[i][j-1]!= undefined &&
+							 this.points[i][j-1].obj_type == WALL_TYPE &&
+							 this.points[i][j+1]!= undefined &&
+							 this.points[i][j+1].obj_type == WALL_TYPE &&
+							 (	(i-1 > 0 && 
+										this.points[i-1][j]!= undefined &&
+										this.points[i-1][j].obj_type == WALL_TYPE) ||
+									(i+1 < this.rows &&
+										this.points[i+1][j]!= undefined &&
+										this.points[i+1][j].obj_type == WALL_TYPE))) {
+								this.points[i][j].img=WALL_BLOCK_IMG;
+                this.points[i][j].yOffset=0;
+//					if ( i!=this.rows-1 && j != 0 && j != this.cols-1 &&
+//							(this.points[i+1][j-1]!=undefined && 
+//							 this.points[i+1][j-1].obj_type==WALL_TYPE && 
+//							 this.points[i+1][j]!=undefined && 
+//							 this.points[i+1][j].obj_type==WALL_TYPE && 
+//							 this.points[i+1][j+1]!=undefined && 
+//							 this.points[i+1][j+1].obj_type==WALL_TYPE)) {
+//									//Fix upside-down "T"
+//									this.points[i+1][j].img=WALL_BLOCK_IMG;
+//                  this.points[i+1][j].yOffset=0;
+//								} else if ( (i != 0 && j !=0 && j != this.cols-1) &&
+//									(this.points[i-1][j-1]!=undefined && 
+//									 this.points[i-1][j-1].obj_type==WALL_TYPE && 
+//									 this.points[i-1][j]!=undefined && 
+//									 this.points[i-1][j].obj_type==WALL_TYPE && 
+//									 this.points[i-1][j+1]!=undefined && 
+//									 this.points[i-1][j+1].obj_type==WALL_TYPE)) {
+//											//Fix normal "T"
+//											this.points[i-1][j].img=WALL_BLOCK_IMG;
+//                      this.points[i-1][j].yOffset=0;
+										
+							 } else if (i-1 > 0 && i+1 < this.rows &&
+													this.points[i-1][j]!=undefined && 
+													this.points[i-1][j].obj_type==WALL_TYPE && 
+													this.points[i+1][j]!=undefined &&
+													this.points[i+1][j].obj_type==WALL_TYPE &&
+													((j-1 > 0 && 
+															this.points[i][j-1]!=undefined  &&
+															this.points[i][j-1].obj_type==WALL_TYPE) ||
+													 (j+1 < this.cols && 
+															this.points[i][j+1]!=undefined &&
+															this.points[i][j+1].obj_type==WALL_TYPE))) {
+												//Fix -| and |- walls
+												this.points[i][j].img = WALL_BLOCK_IMG;
+                      	this.points[i][j].yOffset=0;
+											} 
+								
         }
     }
+}
+
+
+/**
+* Given a row, column and and object type, returns true if the point at
+* at (r,c) has obj_type==type
+* Note that maze rows and columns are not 0-indexed (first row/col is 1,1).
+*/
+Maze.prototype.isType = function (r,c,type) {
+	return (r>=0 && r<this.rows && c>=0 && c<this.cols &&
+					this.points[r][c]!=undefined &&
+					this.points[r][c].obj_type==type);
 }
 
 // Adds an array of Point Objects to this Maze
