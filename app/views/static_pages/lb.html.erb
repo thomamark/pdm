@@ -52,8 +52,7 @@
 			var selectedId;
 			var selectedImg;
 			var selectedObj;
-			var MAX_PER_MAP = {"dragon" : 1};
-			var COUNTS = {};
+			var startPos;
       var IMGS;
 			var OBJS;
 			var oldR =-1;
@@ -61,6 +60,11 @@
 			var MOUSE_DOWN = false;
 			//var canvasX = -1;
 			//var canvasY = -1;
+
+			//For rendering the delete image while hovering
+			function DeletePoint(r,c) {
+			  return new Point(DELETE_IMG, r, c, function () {});
+			}
            
 			function select() {
 				$('li').each(function (i, el) { $(el).removeClass('selected');});
@@ -89,7 +93,8 @@
             "wall" : WallPoint,
             "panda" : BonusPoint,
             "goal" : GoalPoint,
-            "dragon" : StartPoint
+            "start" : StartPoint,
+            "delete" : DeletePoint
 						}
 
         gameCanvas = document.getElementById('maze-canvas');
@@ -133,12 +138,26 @@
 				
 			  $('#maze-canvas').bind('mazeClick', function(e) {
 			  //$('#maze-canvas').click(function(e) {
-					if (!maze.hasPoint(curR,curC)) {
+					if (selectedId == "delete"){
+						maze.removePoint(curR, curC);
+						if (startPos && curR == startPos.r && curC == startPos.c) {
+									startPos = undefined;
+						}
+					} else if (!maze.hasPoint(curR,curC)) {
+						if (selectedId == "start") {
+							if (startPos) {
+									maze.removePoint(startPos.r, startPos.c);
+									startPos.r = curR;
+									startPos.c = curC;
+							} else {
+								startPos = {"r" : curR, "c" : curC};
+							}
+						}
 						maze.addPoint(new selectedObj(curR, curC));
-						maze.fixWallImages();
-						bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-          	maze.render(bgStage);
 					}
+					maze.fixWallImages();
+					bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+         	maze.render(bgStage);
 				});
 
 			  $('#maze-canvas').mousemove(function(e) {
@@ -170,7 +189,7 @@
             "wall" : WALL_BLOCK_IMG,
             "panda" : PANDA_IMG,
             "goal" : PORTAL_IMG,
-            "dragon" : HEAD_DOWN_IMG, 
+            "start" : HEAD_DOWN_IMG, 
             "delete" : DELETE_IMG
 						}
 
@@ -180,7 +199,7 @@
 				  	$('li').each( function (i, el) {
 				      $(el).click(select);
               $(el).append("<img src='"+IMGS[el.id].src+"' />");
-					  	COUNTS[el.id] = 0;
+					  	//COUNTS[el.id] = 0;
 				   	});
           })
 				});
@@ -224,7 +243,7 @@
 				<li id="wall"></li>
 				<li id="panda"></li>
 				<li id="goal"></li>
-        <li id="dragon"></li>
+        <li id="start"></li>
 				<li id="delete"></li>
 			</ul>
 		</div>

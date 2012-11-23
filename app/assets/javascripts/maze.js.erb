@@ -113,6 +113,7 @@ var GAME_STATES = {
   COMPLETE: "Maze complete!",
   GAME_COMPLETE: "Game complete!"
 }
+var BLANK = undefined; //Value for ablank space.
 
 /* Audio */
 var CHANNEL_MAX = 10;   // number of simultaneous audio channels to allow
@@ -324,8 +325,8 @@ Maze.prototype.initPoints = function() {
 	//Create an array with an entry for every point in this maze
 	for (var i=0; i<this.rows; i++){
 		this.points[i]=[];
-		this.points[i][this.cols-1]=undefined;
-	}
+		this.points[i][this.cols-1]=BLANK;
+ }
 
 	//Add borders
 	this.addBorders();
@@ -343,10 +344,6 @@ Maze.prototype.initPoints = function() {
 
     this.fixWallImages();
 	
-}
-
-Maze.prototype.hasPoint = function(r, c) {
-	return this.points[r-1][c-1];
 }
 
 Maze.prototype.fixWallImages = function() {
@@ -588,8 +585,25 @@ Maze.prototype.addObj= function(obj) {
 
 // Adds a point object to this Maze
 Maze.prototype.addPoint = function(pt) {
-	this.points[pt.r-1][pt.c-1]=pt;
-    return pt;
+	// Ensure you can only add points within the maze
+	if (pt.r >0 && pt.r <= this.rows && pt.c > 0 && pt.c <= this.cols) {
+			this.points[pt.r-1][pt.c-1]=pt;
+    	return pt;
+	}
+}
+
+// Adds a point object to this Maze
+Maze.prototype.removePoint = function(r, c) {
+	if (r >0 && r <= this.rows && c > 0 && c <= this.cols) {
+					this.points[r-1][c-1]=BLANK;
+	}
+}
+
+/*
+* Returns a point at r, c in the maze or undefined if none exists
+*/
+Maze.prototype.hasPoint = function(r, c) {
+	return this.points[r-1][c-1];
 }
 
 Maze.prototype.getPoint = function(r,c) {
@@ -799,6 +813,7 @@ function loadAssets() {
 						WALL_9S_MC_IMG;
 
 
+				//Only used in level builder
         DELETE_IMG = createImgAsset("delete", 
             "<%= asset_path('delete.png') %>");
 
