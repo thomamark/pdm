@@ -91,7 +91,7 @@
 
 					OBJS = {
             "wall" : WallPoint,
-            "panda" : BonusPoint,
+            "panda" : PandaPoint,
             "goal" : GoalPoint,
             "start" : StartPoint,
             "delete" : DeletePoint
@@ -103,22 +103,22 @@
         gameStage = gameCanvas.getContext("2d");
         bgStage = bgCanvas.getContext("2d");
         tileStage = tileCanvas.getContext("2d");
-				var mrpx = MAX_ROWS*GRID_H;
-				var mcpx = MAX_COLS*GRID_W;
+				var hpx = MAX_ROWS*GRID_H+WALL_PAD;
+				var wpx = MAX_COLS*GRID_W;
 				
-        $('#maze-canvas').attr("height", mrpx);
-        $('#maze-canvas').attr("width", mcpx);
-        $('#maze-canvas-background').attr("height", mrpx);
-        $('#maze-canvas-background').attr("width", mcpx);
-        $('#tile-canvas').attr("height", mrpx);
-        $('#tile-canvas').attr("width", mcpx);
+        $('#maze-canvas').attr("height", hpx);
+        $('#maze-canvas').attr("width", wpx);
+        $('#maze-canvas-background').attr("height", hpx);
+        $('#maze-canvas-background').attr("width", wpx);
+        $('#tile-canvas').attr("height", hpx);
+        $('#tile-canvas').attr("width", wpx);
 
-        $('#maze-canvas').height(mrpx);
-        $('#maze-canvas').width(mcpx);
-        $('#maze-canvas-background').height(mrpx);
-        $('#maze-canvas-background').width(mcpx);
-        $('#tile-canvas').height(mrpx);
-        $('#tile-canvas').width(mcpx);
+        $('#maze-canvas').height(hpx);
+        $('#maze-canvas').width(wpx);
+        $('#maze-canvas-background').height(hpx);
+        $('#maze-canvas-background').width(wpx);
+        $('#tile-canvas').height(hpx);
+        $('#tile-canvas').width(wpx);
 				
 //				var mazeClick = function (e, d) {
 //					if (!maze.hasPoint(curR,curC)) {
@@ -139,11 +139,22 @@
 			  $('#maze-canvas').bind('mazeClick', function(e) {
 			  //$('#maze-canvas').click(function(e) {
 					if (selectedId == "delete"){
-						maze.removePoint(curR, curC);
-						if (startPos && curR == startPos.r && curC == startPos.c) {
-									startPos = undefined;
+						//Don't delete borders unless this is a goal
+						//Borders are either goals or walls
+						if (!(curR <= 1 || curR >= maze.rows || 
+									curC <= 1 ||curC >= 	maze.cols)) {
+								maze.removePoint(curR, curC);
+								if (startPos && curR == startPos.r && curC == startPos.c) {
+											startPos = undefined;
+								}
+						} else if (maze.isType(curR-1, curC-1, TYPES.GOAL)) {
+								maze.removePoint(curR, curC);
+								maze.addPoint(new OBJS["wall"](curR, curC));
 						}
-					} else if (!maze.hasPoint(curR,curC)) {
+					} else if (!maze.hasPoint(curR,curC) || 
+								(selectedId == "goal" && 
+									(curR == 1 || curR == maze.rows || 
+									 curC == 1 || curC == maze.cols))) {
 						if (selectedId == "start") {
 							if (startPos) {
 									maze.removePoint(startPos.r, startPos.c);
@@ -152,6 +163,9 @@
 							} else {
 								startPos = {"r" : curR, "c" : curC};
 							}
+						}
+						if (selectedId =="goal") {
+							maze.removePoint(curR, curC);	
 						}
 						maze.addPoint(new selectedObj(curR, curC));
 					}
@@ -247,12 +261,12 @@
 				<li id="delete"></li>
 			</ul>
 		</div>
-	<!--
+		<!--
 		<span >X = <span id="cx">&nbsp;</span> </span>
 		<span >Y = <span id="cy">&nbsp;</span> </span>
 		<span >R = <span id="cr">&nbsp;</span> </span>
 		<span >C = <span id="cc">&nbsp;</span> </span>
-	-->
+		-->
         <div class="canvas" id="game-content">
                 <canvas class="canvas" id="tile-canvas" style="z-index: 1;"></canvas>
                 <canvas class="canvas" id="maze-canvas-background" style="z-index: 2;"></canvas>

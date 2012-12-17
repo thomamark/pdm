@@ -1,6 +1,4 @@
-/**
-* Panda Dragon Maze
-* Copyright 2011 Mark Thomas (mr.thomas gmail)
+/* Copyright 2011 Mark Thomas (mr.thomas gmail)
 */
 
 /*************************************/
@@ -13,6 +11,7 @@ var BASE_W = 32;
 var BASE_H= 16;
 var GRID_W = 32*SPRITE_SCALE;
 var GRID_H = 16*SPRITE_SCALE;
+var WALL_PAD=10*SPRITE_SCALE;
 var MAX_COLS = Math.floor(900/GRID_W);
 var MAX_ROWS = Math.floor(500/GRID_H);
 var BORDER_IMG; 
@@ -65,6 +64,12 @@ var AUDIODIR ="assets"
 var LOAD_ASSETS = true;
 var INIT_GAME = true;
 
+
+/* Maze encoding variables */
+var ENC_W = 2; //num of hex digits per square in a string
+var WI = 0;
+var SIZEI = 1;
+
 /* Isometric rendering */
 var COS=Math.cos(0.46365);
 var SIN=Math.sin(0.46365);
@@ -105,7 +110,20 @@ var dir;
 var lastDir;
 var nextDir;
 var counter;
-var WALL_TYPE="wall";
+var TYPES = {
+	BLANK : 0,
+	WALL : 1,
+	PANDA : 2,
+	GOAL: 3,
+	START: 4
+}
+
+var POINTS = {};
+POINTS[TYPES.WALL] =  WallPoint;
+POINTS[TYPES.PANDA] = PandaPoint;
+POINTS[TYPES.GOAL] = GoalPoint;
+POINTS[TYPES.START] = StartPoint;
+
 var GAME_STATES = {
   READY : "ready?",
   FAILED: "Maze failed!",
@@ -151,23 +169,23 @@ function Point(img,r, c, isOnFn, pointType) {
 
 // A Wall in the maze
 function WallPoint(r,c)  {
-	return new Point(WALL_BLOCK_IMG, r, c, mazeCollision, WALL_TYPE);
+	return new Point(WALL_BLOCK_IMG, r, c, mazeCollision, TYPES.WALL);
 }
 
 //A goal
 function GoalPoint(r,c)  {
 	//TODO: add ability to have different results for different goals
-	return new Point(PORTAL_IMG, r, c, mazeComplete);
+	return new Point(PORTAL_IMG, r, c, mazeComplete, TYPES.GOAL);
 }
 
 //A Panda
-function BonusPoint(r,c) {
-  return  new Point(PANDA_IMG, r, c, collectBonus);
+function PandaPoint(r,c) {
+  return  new Point(PANDA_IMG, r, c, collectBonus, TYPES.PANDA);
 }
 
 //Dragon starting point
 function StartPoint(r,c) {
-	return new Point(HEAD_DOWN_IMG, r, c, function () {});
+	return new Point(HEAD_DOWN_IMG, r, c, function () {}, TYPES.START);
 }
 
 //Special point for background tiles. These are used initially to render
@@ -210,7 +228,7 @@ function WallArr(sr, sc, er, ec) {
 	ec = ec ? ec : sc;
         this.points = new PointArr(sr, sc, er, ec, WallPoint);
 //        for(var i = 0; i<this.points.length; i++) {
-//            this.points[i].obj_type=WALL_TYPE;
+//            this.points[i].obj_type=TYPES.WALL;
 //        }
 }
 
@@ -224,9 +242,9 @@ function GoalArr(sr, sc, er, ec) {
         this.points = new PointArr(sr, sc, er, ec, GoalPoint);
 }
 
-//BonusPoints are points that can be collected. They are placed in hard-to-reach 
+//PandaPoints are points that can be collected. They are placed in hard-to-reach 
 //locations to increase the difficulty of the maze.
-function BonusArr(r,c) {
+function PandaArr(r,c) {
     this.points = [new Point(PANDA_IMG, r, c, collectBonus)];
 }
 
@@ -319,6 +337,66 @@ Maze.prototype.addBorders = function () {
 Maze.prototype.removeBorders = function () {
 }
 
+Maze.prototype.toString = function () {
+	/* Maze string representation:
+	*  1 hex digit for number of hex digits per square (N)
+	*  N hex digits for num rows (R)
+	*  N hex digits for num cols (C)
+	*  N hex digits for each of the RxC squares in the maze
+	*/
+
+	//Fn for extending the length of a hex string to <width> chars
+	var pad = function (hexstr, width) {
+		var p = width - hexstr.length;
+		if (p >0) { return Array(p+1).join("0")+hexstr; }
+		else if (p<0) { throw "Too long to encode into a Maze string "+hexstr;}
+		else { return hexstr; }
+	};
+	var s = ""+Number(ENC_W).toString(16) + 
+					pad(Number(this.rows).toString(16), ENC_W) +
+					pad(Number(this.cols).toString(16),ENC_W);
+	try {
+		for (var i = 0; i< this.rows; i++) {
+			for ( var j = 0; j<this.cols; j++) {
+				s+= pad( Number( 
+								(this.points[i][j]) ? 
+										this.points[i][j].obj_type : 0).toString(16), 
+								ENC_W);
+			}
+		}
+	} catch (err){
+		console.log("Error at row " + (i+1) + " and column " + (j+1) + 
+			"\n"+ err.message);
+		return null;
+	}
+	return s;
+}
+
+/* Constructs a maze given a string rep of a maze (see toString above) */
+Maze.prototype.load = function(s) {
+	try {
+					var w = parseInt(s.charAt(WI), 16);
+					var rows = parseInt(s.substring(SIZEI,SIZEI+w), 16);
+					var cols = parseInt(s.substring(SIZEI+w, SIZEI+2*w), 16); 
+					var HEADL = SIZEI+2*w;
+					if (s.length != HEADL + rows*cols*w) {
+							throw "Invalid maze string length. Expected: "+(HEADL+rows*cols*w) + " Actual: " + s.length;
+					}
+					this.setSize(rows, cols);
+					for (var i = HEADL; i < rows*cols*w; i+=w){
+							var p = Number(s.substring(i, i+w-1)).toString(16);
+							if (p != TYPES.BLANK) {
+										var c = (((i-HEADL)/w) % cols) +1;	
+										var r = Math.floor(((i-HEADL)/w) / this.cols) +1;	
+										if (!POINTS[p]) { throw "Unknown point type found: " + p;}
+										this.addPoint(new POINTS[p](r, c));
+							}
+					}
+	} catch (err) {
+			throw "Error loading maze: " + err;
+	}
+}
+
 Maze.prototype.initPoints = function() {
 	this.points = [];
     this.gotBonuses = 0;
@@ -350,214 +428,220 @@ Maze.prototype.fixWallImages = function() {
     for (var i = 0; i<this.rows; i++) {
         for (var j= 0; j<this.cols;j++) {
            //We only care about walls, so skip everything else
-            try {
-           		if (!this.points[i][j] || this.points[i][j].obj_type!=WALL_TYPE) {
-           		     continue;
-           		 }
-            } catch(err) {
-                alert("caught the error");
-                console.log("error! i="+i+" j="+j);
-            }
+//            try {
+//           		if (!this.points[i][j] || !this.isType(i,j,TYPES.WALL) ||
+//									!this.isType(i,j,TYPES.GOAL)) {
+//           		     continue;
+//           		 }
+//            } catch(err) {
+//                console.log("Error fixing wall images! i="+i+" j="+j);
+//            }
 
 
+			if (this.isType(i,j,TYPES.GOAL) && 
+						(i == 0 || i == this.rows-1 || j == 0 || j == this.cols-1)) {
+						this.points[i][j].img=undefined;
+	          this.points[i][j].yOffset=0;
+			} else if (this.isType(i,j,TYPES.WALL)) {
 					//Build 9-slice
-					if (this.isType(i-1,j-1,WALL_TYPE) &&
-							this.isType(i-1,j,WALL_TYPE) &&
-							this.isType(i-1,j+1,WALL_TYPE) &&
-							this.isType(i,j-1,WALL_TYPE) &&
-							this.isType(i,j,WALL_TYPE) &&
-							this.isType(i,j+1,WALL_TYPE) &&
-							this.isType(i+1,j-1,WALL_TYPE) &&
-							this.isType(i+1,j,WALL_TYPE) &&
-							this.isType(i+1,j+1,WALL_TYPE)) {
+					if (this.isType(i-1,j-1,TYPES.WALL) &&
+							this.isType(i-1,j,TYPES.WALL) &&
+							this.isType(i-1,j+1,TYPES.WALL) &&
+							this.isType(i,j-1,TYPES.WALL) &&
+							this.isType(i,j,TYPES.WALL) &&
+							this.isType(i,j+1,TYPES.WALL) &&
+							this.isType(i+1,j-1,TYPES.WALL) &&
+							this.isType(i+1,j,TYPES.WALL) &&
+							this.isType(i+1,j+1,TYPES.WALL)) {
 								//Middle-center wall
 								this.points[i][j].img=WALL_9S_MC_IMG;
 	              this.points[i][j].yOffset=0;
 							} else if (
-								this.isType(i-1,j-1,WALL_TYPE) &&
-								this.isType(i-1,j,WALL_TYPE) &&
-								this.isType(i-1,j+1,WALL_TYPE) &&
-								this.isType(i,j-1,WALL_TYPE) &&
-								this.isType(i,j,WALL_TYPE) &&
-								this.isType(i,j+1,WALL_TYPE) &&
-								!(this.isType(i+1,j-1,WALL_TYPE) &&
-									this.isType(i+1,j,WALL_TYPE)) &&
-								!(this.isType(i+1,j+1,WALL_TYPE) && 
-									this.isType(i+1,j,WALL_TYPE))) {
+								this.isType(i-1,j-1,TYPES.WALL) &&
+								this.isType(i-1,j,TYPES.WALL) &&
+								this.isType(i-1,j+1,TYPES.WALL) &&
+								this.isType(i,j-1,TYPES.WALL) &&
+								this.isType(i,j,TYPES.WALL) &&
+								this.isType(i,j+1,TYPES.WALL) &&
+								!(this.isType(i+1,j-1,TYPES.WALL) &&
+									this.isType(i+1,j,TYPES.WALL)) &&
+								!(this.isType(i+1,j+1,TYPES.WALL) && 
+									this.isType(i+1,j,TYPES.WALL))) {
 									//Bottom-center wall
 									this.points[i][j].img=WALL_9S_BC_IMG;
 	            	  this.points[i][j].yOffset=0;
 							} else if (
-								!(this.isType(i-1,j-1,WALL_TYPE) &&
-									this.isType(i-1,j,WALL_TYPE)) &&
-								!(this.isType(i-1,j+1,WALL_TYPE) &&
-									this.isType(i-1,j,WALL_TYPE)) &&
-								this.isType(i,j-1,WALL_TYPE) &&
-								this.isType(i,j,WALL_TYPE) &&
-								this.isType(i,j+1,WALL_TYPE) &&
-								this.isType(i+1,j-1,WALL_TYPE) &&
-								this.isType(i+1,j,WALL_TYPE) &&
-								this.isType(i+1,j+1,WALL_TYPE)) {
+								!(this.isType(i-1,j-1,TYPES.WALL) &&
+									this.isType(i-1,j,TYPES.WALL)) &&
+								!(this.isType(i-1,j+1,TYPES.WALL) &&
+									this.isType(i-1,j,TYPES.WALL)) &&
+								this.isType(i,j-1,TYPES.WALL) &&
+								this.isType(i,j,TYPES.WALL) &&
+								this.isType(i,j+1,TYPES.WALL) &&
+								this.isType(i+1,j-1,TYPES.WALL) &&
+								this.isType(i+1,j,TYPES.WALL) &&
+								this.isType(i+1,j+1,TYPES.WALL)) {
 									//top-center wall
 									this.points[i][j].img=WALL_9S_TC_IMG;
 	            	  this.points[i][j].yOffset=0;
 							} else if (
-								!(this.isType(i-1,j-1,WALL_TYPE) &&
-									this.isType(i,j-1,WALL_TYPE)) &&
-								this.isType(i-1,j,WALL_TYPE) &&
-								this.isType(i-1,j+1,WALL_TYPE) &&
-								this.isType(i,j,WALL_TYPE) &&
-								this.isType(i,j+1,WALL_TYPE) &&
-								!(this.isType(i+1,j-1,WALL_TYPE) &&
-									this.isType(i,j-1,WALL_TYPE)) &&
-								this.isType(i+1,j,WALL_TYPE) &&
-								this.isType(i+1,j+1,WALL_TYPE)) {
+								!(this.isType(i-1,j-1,TYPES.WALL) &&
+									this.isType(i,j-1,TYPES.WALL)) &&
+								this.isType(i-1,j,TYPES.WALL) &&
+								this.isType(i-1,j+1,TYPES.WALL) &&
+								this.isType(i,j,TYPES.WALL) &&
+								this.isType(i,j+1,TYPES.WALL) &&
+								!(this.isType(i+1,j-1,TYPES.WALL) &&
+									this.isType(i,j-1,TYPES.WALL)) &&
+								this.isType(i+1,j,TYPES.WALL) &&
+								this.isType(i+1,j+1,TYPES.WALL)) {
 									//middle-left wall
 									this.points[i][j].img=WALL_9S_ML_IMG;
 	            	  this.points[i][j].yOffset=0;
 							} else if (
-								this.isType(i-1,j,WALL_TYPE) &&
-								this.isType(i-1,j+1,WALL_TYPE) &&
-								!(this.isType(i-1,j-1,WALL_TYPE) &&
-								  this.isType(i,j-1,WALL_TYPE)) &&
-								this.isType(i,j,WALL_TYPE) &&
-								this.isType(i,j+1,WALL_TYPE) &&
-								!(this.isType(i+1,j,WALL_TYPE) &&
-								  this.isType(i+1,j+1,WALL_TYPE))) {
+								this.isType(i-1,j,TYPES.WALL) &&
+								this.isType(i-1,j+1,TYPES.WALL) &&
+								!(this.isType(i-1,j-1,TYPES.WALL) &&
+								  this.isType(i,j-1,TYPES.WALL)) &&
+								this.isType(i,j,TYPES.WALL) &&
+								this.isType(i,j+1,TYPES.WALL) &&
+								!(this.isType(i+1,j,TYPES.WALL) &&
+								  this.isType(i+1,j+1,TYPES.WALL))) {
 									//bottom-left wall
 									this.points[i][j].img=WALL_9S_BL_IMG;
 	            	  this.points[i][j].yOffset=0;
 							} else if (
-								!(this.isType(i-1,j,WALL_TYPE) &&
-									this.isType(i-1,j+1,WALL_TYPE)) &&
-								!(this.isType(i,j-1,WALL_TYPE) &&
-									this.isType(i+1,j-1,WALL_TYPE)) &&
-								this.isType(i,j,WALL_TYPE) &&
-								this.isType(i,j+1,WALL_TYPE) &&
-								this.isType(i+1,j,WALL_TYPE) &&
-								this.isType(i+1,j+1,WALL_TYPE)) {
+								!(this.isType(i-1,j,TYPES.WALL) &&
+									this.isType(i-1,j+1,TYPES.WALL)) &&
+								!(this.isType(i,j-1,TYPES.WALL) &&
+									this.isType(i+1,j-1,TYPES.WALL)) &&
+								this.isType(i,j,TYPES.WALL) &&
+								this.isType(i,j+1,TYPES.WALL) &&
+								this.isType(i+1,j,TYPES.WALL) &&
+								this.isType(i+1,j+1,TYPES.WALL)) {
 									//top-left wall
 									this.points[i][j].img=WALL_9S_TL_IMG;
 	            	  this.points[i][j].yOffset=0;
 							} else if (
-								this.isType(i-1,j-1,WALL_TYPE) &&
-								this.isType(i-1,j,WALL_TYPE) &&
-								!(this.isType(i-1,j+1,WALL_TYPE) &&
-									this.isType(i,j+1,WALL_TYPE)) &&
-								this.isType(i,j-1,WALL_TYPE) &&
-								this.isType(i,j,WALL_TYPE) &&
-								this.isType(i+1,j-1,WALL_TYPE) &&
-								this.isType(i+1,j,WALL_TYPE) &&
-								!(this.isType(i,j+1,WALL_TYPE) &&
-								this.isType(i+1,j+1,WALL_TYPE))) {
+								this.isType(i-1,j-1,TYPES.WALL) &&
+								this.isType(i-1,j,TYPES.WALL) &&
+								!(this.isType(i-1,j+1,TYPES.WALL) &&
+									this.isType(i,j+1,TYPES.WALL)) &&
+								this.isType(i,j-1,TYPES.WALL) &&
+								this.isType(i,j,TYPES.WALL) &&
+								this.isType(i+1,j-1,TYPES.WALL) &&
+								this.isType(i+1,j,TYPES.WALL) &&
+								!(this.isType(i,j+1,TYPES.WALL) &&
+								this.isType(i+1,j+1,TYPES.WALL))) {
 									//middle-right wall
 									this.points[i][j].img=WALL_9S_MR_IMG;
 	            	  this.points[i][j].yOffset=0;
 							} else if (
-								this.isType(i-1,j-1,WALL_TYPE) &&
-								this.isType(i-1,j,WALL_TYPE) &&
-								!(this.isType(i-1,j+1,WALL_TYPE) &&
-									this.isType(i,j+1,WALL_TYPE)) &&
-								this.isType(i,j-1,WALL_TYPE) &&
-								this.isType(i,j,WALL_TYPE) &&
-								!(this.isType(i+1,j-1,WALL_TYPE) &&
-									this.isType(i+1,j,WALL_TYPE))) {
+								this.isType(i-1,j-1,TYPES.WALL) &&
+								this.isType(i-1,j,TYPES.WALL) &&
+								!(this.isType(i-1,j+1,TYPES.WALL) &&
+									this.isType(i,j+1,TYPES.WALL)) &&
+								this.isType(i,j-1,TYPES.WALL) &&
+								this.isType(i,j,TYPES.WALL) &&
+								!(this.isType(i+1,j-1,TYPES.WALL) &&
+									this.isType(i+1,j,TYPES.WALL))) {
 									//bottom-right wall
 									this.points[i][j].img=WALL_9S_BR_IMG;
 	            	  this.points[i][j].yOffset=0;
 							} else if (
-								!(this.isType(i-1,j-1,WALL_TYPE) &&
-									this.isType(i-1,j,WALL_TYPE)) &&
-								this.isType(i,j-1,WALL_TYPE) &&
-								this.isType(i,j,WALL_TYPE) &&
-								!(this.isType(i,j+1,WALL_TYPE) &&
-									this.isType(i+1,j+1,WALL_TYPE)) &&
-								this.isType(i+1,j-1,WALL_TYPE) &&
-								this.isType(i+1,j,WALL_TYPE)) {
+								!(this.isType(i-1,j-1,TYPES.WALL) &&
+									this.isType(i-1,j,TYPES.WALL)) &&
+								this.isType(i,j-1,TYPES.WALL) &&
+								this.isType(i,j,TYPES.WALL) &&
+								!(this.isType(i,j+1,TYPES.WALL) &&
+									this.isType(i+1,j+1,TYPES.WALL)) &&
+								this.isType(i+1,j-1,TYPES.WALL) &&
+								this.isType(i+1,j,TYPES.WALL)) {
 									//top-right wall
 									this.points[i][j].img=WALL_9S_TR_IMG;
 	            	  this.points[i][j].yOffset=0;
-							} else if (this.isType(i-1,j-1,WALL_TYPE) &&
-                this.isType(i-1,j,WALL_TYPE) &&
-                this.isType(i-1,j+1,WALL_TYPE) &&
-                this.isType(i,j-1,WALL_TYPE) &&
-                this.isType(i,j,WALL_TYPE) &&
-                this.isType(i,j+1,WALL_TYPE) &&
-                this.isType(i+1,j-1,WALL_TYPE) &&
-                this.isType(i+1,j,WALL_TYPE) &&
-                !this.isType(i+1,j+1,WALL_TYPE)) {
+							} else if (this.isType(i-1,j-1,TYPES.WALL) &&
+                this.isType(i-1,j,TYPES.WALL) &&
+                this.isType(i-1,j+1,TYPES.WALL) &&
+                this.isType(i,j-1,TYPES.WALL) &&
+                this.isType(i,j,TYPES.WALL) &&
+                this.isType(i,j+1,TYPES.WALL) &&
+                this.isType(i+1,j-1,TYPES.WALL) &&
+                this.isType(i+1,j,TYPES.WALL) &&
+                !this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with bottom-right missing
                     this.points[i][j].img = WALL_9S_MCBR_IMG;
                     this.points[i][j].yOffset=0;
-              } else if (this.isType(i-1,j-1,WALL_TYPE) &&
-                this.isType(i-1,j,WALL_TYPE) &&
-                this.isType(i-1,j+1,WALL_TYPE) &&
-                this.isType(i,j-1,WALL_TYPE) &&
-                this.isType(i,j,WALL_TYPE) &&
-                this.isType(i,j+1,WALL_TYPE) &&
-                !this.isType(i+1,j-1,WALL_TYPE) &&
-                this.isType(i+1,j,WALL_TYPE) &&
-                this.isType(i+1,j+1,WALL_TYPE)) {
+              } else if (this.isType(i-1,j-1,TYPES.WALL) &&
+                this.isType(i-1,j,TYPES.WALL) &&
+                this.isType(i-1,j+1,TYPES.WALL) &&
+                this.isType(i,j-1,TYPES.WALL) &&
+                this.isType(i,j,TYPES.WALL) &&
+                this.isType(i,j+1,TYPES.WALL) &&
+                !this.isType(i+1,j-1,TYPES.WALL) &&
+                this.isType(i+1,j,TYPES.WALL) &&
+                this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with bottom-left missing
                     this.points[i][j].img = WALL_9S_MCBL_IMG;
                     this.points[i][j].yOffset=0;
-              } else if (this.isType(i-1,j-1,WALL_TYPE) &&
-                this.isType(i-1,j,WALL_TYPE) &&
-                !this.isType(i-1,j+1,WALL_TYPE) &&
-                this.isType(i,j-1,WALL_TYPE) &&
-                this.isType(i,j,WALL_TYPE) &&
-                this.isType(i,j+1,WALL_TYPE) &&
-                this.isType(i+1,j-1,WALL_TYPE) &&
-                this.isType(i+1,j,WALL_TYPE) &&
-                this.isType(i+1,j+1,WALL_TYPE)) {
+              } else if (this.isType(i-1,j-1,TYPES.WALL) &&
+                this.isType(i-1,j,TYPES.WALL) &&
+                !this.isType(i-1,j+1,TYPES.WALL) &&
+                this.isType(i,j-1,TYPES.WALL) &&
+                this.isType(i,j,TYPES.WALL) &&
+                this.isType(i,j+1,TYPES.WALL) &&
+                this.isType(i+1,j-1,TYPES.WALL) &&
+                this.isType(i+1,j,TYPES.WALL) &&
+                this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with top-right missing
                     this.points[i][j].img = WALL_9S_MCTR_IMG;
                     this.points[i][j].yOffset=0;
               } else if (
-                !this.isType(i-1,j-1,WALL_TYPE) &&
-                this.isType(i-1,j,WALL_TYPE) &&
-                this.isType(i-1,j+1,WALL_TYPE) &&
-                this.isType(i,j-1,WALL_TYPE) &&
-                this.isType(i,j,WALL_TYPE) &&
-                this.isType(i,j+1,WALL_TYPE) &&
-                this.isType(i+1,j-1,WALL_TYPE) &&
-                this.isType(i+1,j,WALL_TYPE) &&
-                this.isType(i+1,j+1,WALL_TYPE)) {
+                !this.isType(i-1,j-1,TYPES.WALL) &&
+                this.isType(i-1,j,TYPES.WALL) &&
+                this.isType(i-1,j+1,TYPES.WALL) &&
+                this.isType(i,j-1,TYPES.WALL) &&
+                this.isType(i,j,TYPES.WALL) &&
+                this.isType(i,j+1,TYPES.WALL) &&
+                this.isType(i+1,j-1,TYPES.WALL) &&
+                this.isType(i+1,j,TYPES.WALL) &&
+                this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with top-left missing
                     this.points[i][j].img = WALL_9S_MCTL_IMG;
                     this.points[i][j].yOffset=0;
-              } else if (this.isType(i,j-1,WALL_TYPE) &&
-								this.isType(i, j+1, WALL_TYPE) &&
-								(this.isType(i+1, j, WALL_TYPE) ||
-									this.isType(i-1, j, WALL_TYPE))) {
+              } else if (this.isType(i,j-1,TYPES.WALL) &&
+								this.isType(i, j+1, TYPES.WALL) &&
+								(this.isType(i+1, j, TYPES.WALL) ||
+									this.isType(i-1, j, TYPES.WALL))) {
 											//Fix T-shaped and inverse T-shaped walls
 											this.points[i][j].img=WALL_BLOCK_IMG;
 	                		this.points[i][j].yOffset=0;
-							 } else if (this.isType(i-1,j,WALL_TYPE) && 
-											this.isType(i+1,j,WALL_TYPE) &&
-											(this.isType(i,j-1,WALL_TYPE) ||
-													this.isType(i,j+1,WALL_TYPE))) {
+							 } else if (this.isType(i-1,j,TYPES.WALL) && 
+											this.isType(i+1,j,TYPES.WALL) &&
+											(this.isType(i,j-1,TYPES.WALL) ||
+													this.isType(i,j+1,TYPES.WALL))) {
 													//Fix -| and |- walls
 													this.points[i][j].img = WALL_BLOCK_IMG;
                       		this.points[i][j].yOffset=0;
-							} else if (this.isType(i-1,j,WALL_TYPE) &&
-							  this.isType(i+1,j,WALL_TYPE) &&
-							  !this.isType(i, j-1, WALL_TYPE) &&
-								!this.isType(i,j+1, WALL_TYPE)) {
+							} else if (this.isType(i-1,j,TYPES.WALL) &&
+							  this.isType(i+1,j,TYPES.WALL) &&
+							  !this.isType(i, j-1, TYPES.WALL) &&
+								!this.isType(i,j+1, TYPES.WALL)) {
                     //Fix vertical wall image
                     this.points[i][j].img=VERTICAL_WALL_IMG;
-           	  } else if (this.isType(i,j-1,WALL_TYPE) &&
-								this.isType(i, j+1, WALL_TYPE) &&
-								!this.isType(i-1,j, WALL_TYPE) &&
-								!this.isType(i+1,j, WALL_TYPE)) {
+           	  } else if (this.isType(i,j-1,TYPES.WALL) &&
+								this.isType(i, j+1, TYPES.WALL) &&
+								!this.isType(i-1,j, TYPES.WALL) &&
+								!this.isType(i+1,j, TYPES.WALL)) {
                     //Fix horizontal wall image
                     this.points[i][j].img=HORIZONTAL_WALL_IMG;
                     this.points[i][j].yOffset=3*SPRITE_SCALE;
               } else {
-										//default to the pillar wall (in case of deletes
+										//default to the pillar wall
 										this.points[i][j].img = WALL_BLOCK_IMG; 
 	              		this.points[i][j].yOffset=0;
         		}
+		}
     }
   } 
 }
@@ -887,12 +971,14 @@ function maze_init(){
         TOTAL_SCORE = 0;
       }
         maze = LEVELS[CURRENT_LEVEL];
-        $(gameCanvas).attr("height", maze.cols*26);
-        $(gameCanvas).attr("width", maze.rows*GRID_W);
-        $(bgCanvas).attr("height", maze.cols*26);
-        $(bgCanvas).attr("width", maze.rows*GRID_W);
-        $(tileCanvas).attr("height", maze.cols*26);
-        $(tileCanvas).attr("width", maze.rows*GRID_W);
+        var hpx = MAX_ROWS*GRID_H+WALL_PAD;
+        var wpx = MAX_COLS*GRID_W;
+        $(gameCanvas).attr("height", hpx);
+        $(gameCanvas).attr("width", wpx);
+        $(bgCanvas).attr("height", hpx);
+        $(bgCanvas).attr("width", wpx);
+        $(tileCanvas).attr("height", hpx);
+        $(tileCanvas).attr("width", wpx);
     } else {
         maze.initPoints();
     }
@@ -1094,9 +1180,9 @@ function init_levels() {
     objs.push(new WallArr(13,11,13,11));
     objs.push(new WallArr(9,16,10,16));
     objs.push(new WallArr(13,16,16,16));
-    objs.push(new BonusArr(11,5));
-    objs.push(new BonusArr(13,8));
-    objs.push(new BonusArr(11,16));
+    objs.push(new PandaArr(11,5));
+    objs.push(new PandaArr(13,8));
+    objs.push(new PandaArr(11,16));
     objs.push(new GoalArr(2,16,2,16));
     var jm = new Maze();
 	  jm.setSize(17,17);
@@ -1145,9 +1231,9 @@ function init_levels() {
     objs.push(new WallArr(7,7,7,7));
     objs.push(new WallArr(7,9,7,9));
     objs.push(new GoalArr(15,8,15,8));
-    objs.push(new BonusArr(9,5));        
-    objs.push(new BonusArr(9,10));       
-    objs.push(new BonusArr(7,3)); 
+    objs.push(new PandaArr(9,5));        
+    objs.push(new PandaArr(9,10));       
+    objs.push(new PandaArr(7,3)); 
     //var is = new Maze(15,15, 7, 8, 0, 0, objs);
     var is = new Maze();
 	  is.setSize(15,15);
@@ -1242,9 +1328,9 @@ function init_levels() {
     objs.push(new WallArr(5,7,5,7));        
     objs.push(new WallArr(7,7,7,7));        
     objs.push(new WallArr(9,7,9,7));        
-    objs.push(new BonusArr(2,4));        
-    objs.push(new BonusArr(2,6));        
-    objs.push(new BonusArr(9,8));        
+    objs.push(new PandaArr(2,4));        
+    objs.push(new PandaArr(2,6));        
+    objs.push(new PandaArr(9,8));        
     objs.push(new GoalArr(10,9,10,9));          
     //var mg = new Maze(10,10,9,2, 0, 0, objs);        
     var mg = new Maze();        
@@ -1269,9 +1355,9 @@ function init_levels() {
     objs.push(new WallArr(7,10,8,10));          
     objs.push(new WallArr(4,9,5,9));        
     objs.push(new WallArr(2,10,2,10));          
-    objs.push(new BonusArr(8,6));        
-    objs.push(new BonusArr(10,6));       
-    objs.push(new BonusArr(5,8));        
+    objs.push(new PandaArr(8,6));        
+    objs.push(new PandaArr(10,6));       
+    objs.push(new PandaArr(5,8));        
     objs.push(new GoalArr(6,5,6,5));        
     //var ct = new Maze(12,11,2,2, 0, 0, objs); 
     var ct = new Maze(); 
@@ -1560,6 +1646,7 @@ function renderScore() {
 /*************************************/
 
 function renderObject($obj, stage) {
+	if ($obj.img == undefined){ return; }
 	var xy=maze.grid2canvas($obj.r, $obj.c);
     var x = xy[0]+$obj.xOffset;
     var y = xy[1]+$obj.yOffset;
