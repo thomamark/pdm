@@ -151,10 +151,7 @@
 								maze.removePoint(curR, curC);
 								maze.addPoint(new OBJS["wall"](curR, curC));
 						}
-					} else if (!maze.hasPoint(curR,curC) || 
-								(selectedId == "goal" && 
-									(curR == 1 || curR == maze.rows || 
-									 curC == 1 || curC == maze.cols))) {
+					} else if (!maze.hasPoint(curR,curC)) {
 						if (selectedId == "start") {
 							if (startPos) {
 									maze.removePoint(startPos.r, startPos.c);
@@ -164,14 +161,14 @@
 								startPos = {"r" : curR, "c" : curC};
 							}
 						}
-						if (selectedId =="goal") {
-							maze.removePoint(curR, curC);	
-						}
+						maze.addPoint(new selectedObj(curR, curC));
+					} else if (selectedId == "goal" && (curR == 1 || curR == maze.rows || curC == 1 || curC == maze.cols)) {
+						maze.removePoint(curR, curC);
 						maze.addPoint(new selectedObj(curR, curC));
 					}
 					maze.fixWallImages();
 					bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-         	maze.render(bgStage);
+         			maze.render(bgStage);
 				});
 
 			  $('#maze-canvas').mousemove(function(e) {

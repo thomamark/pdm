@@ -84,6 +84,7 @@ var LEFT_ARROW=37;
 var UP_ARROW=38;
 var RIGHT_ARROW=39;
 var DOWN_ARROW=40;
+var ESC=27;
 var MOVE_DELAY=10;
 
 /* Game */
@@ -103,6 +104,7 @@ var bgStage;
 var tileCanvas;  // canvas for static background
 var tileStage;  // canvas for static background
 var game_state;
+var PREPAUSE_GAME_STATE;
 var request;
 var dragon;
 var maze; //the current maze
@@ -129,6 +131,7 @@ var GAME_STATES = {
   FAILED: "Maze failed!",
   PLAYING: "playing",
   COMPLETE: "Maze complete!",
+  PAUSED: "Paused",
   GAME_COMPLETE: "Game complete!"
 }
 var BLANK = undefined; //Value for ablank space.
@@ -190,7 +193,7 @@ function StartPoint(r,c) {
 
 //Special point for background tiles. These are used initially to render
 //background images only, so there's no need for an isOn function
-function TilePoint(img, r, c) {
+function TilePoint(r, c) {
    var img = TILES_IMG_ARRAY[Math.floor(Math.random()*TILES_IMG_ARRAY.length)];
    return new Point(img, r, c, null); 
 }
@@ -205,7 +208,7 @@ function Maze (s) {
 }
 
 Maze.prototype.reset = function() {
-	this.load(s);
+	this.load(this.s);
 }
 
 // Sets the Maze's size in rows (height) and columns (width)
@@ -328,7 +331,7 @@ Maze.prototype.load = function(s) {
 		}
 		this.setSize(rows, cols);
 		this.initPoints();
-		for (var i = HEADL; i < rows*cols*w; i+=w){
+		for (var i = HEADL; i < rows*cols*w+HEADL; i+=w){
 			var p    = Number(s.substring(i, i+w).toString(16));
 			if (p != TYPES.BLANK) {
 				var c = (((i-HEADL)/w) % cols) +1;	
@@ -592,37 +595,35 @@ Maze.prototype.isType = function (i,j,type) {
 					this.points[i][j].obj_type==type);
 }
 
-// // Adds an array of Point Objects to this Maze
-// // Takes arr an Array of Point objects
-// Maze.prototype.addObjs= function(arr) {
-// 	this.objs = this.objs.concat(arr);
-// }
-
-// Maze.prototype.addObj= function(obj) {
-// 	this.objs.push(obj)
-// }
-
 // Adds a point object to this Maze
 Maze.prototype.addPoint = function(pt) {
 	// Ensure you can only add points within the maze
 	if (pt.r >0 && pt.r <= this.rows && pt.c > 0 && pt.c <= this.cols) {
-		this.points[pt.r-1][pt.c-1] = pt;
-		if (pt.obj_type == TYPES.START) {
-			this.setStart(pt.r, pt.c);
+		switch(pt.obj_type) {
+			case TYPES.START:
+				//We don't add start points to the maze
+				this.setStart(pt.r, pt.c);
+				break;
+			default:
+				this.points[pt.r-1][pt.c-1] = pt;			
 		}
     	return pt;
 	}
 }
 
-// Adds a point object to this Maze
+/* Removes a point object from this Maze */
 Maze.prototype.removePoint = function(r, c) {
 	if (r >0 && r <= this.rows && c > 0 && c <= this.cols) {
 		var pt = this.points[r-1][c-1];
-		if (pt && pt.obj_type == TYPES.START) {
-			//If you're removing a start, unset the start position
-			this.unsetStart();
+		switch(pt.obj_type) {
+			case TYPES.START:
+				//If you're removing a start, unset the start position
+				this.unsetStart();
+				break;
+			default:
+				this.points[r-1][c-1]=BLANK;			
 		}
-		this.points[r-1][c-1]=BLANK;
+		return pt;
 	}
 }
 
@@ -649,9 +650,7 @@ Maze.prototype.render = function (stage) {
 		for (var j =0; j<this.cols; j++) {
             //render the background tiles the first time we render the maze.
             if (game_state != GAME_STATES.FAILED) {
-                renderObject(
-                    new TilePoint(i+1, j+1),
-                    tileStage);
+                renderObject(new TilePoint(i+1, j+1),tileStage);
             }
 			if (this.points[i][j]) {
 				renderObject(this.points[i][j], stage);
@@ -923,7 +922,7 @@ function maze_init(){
         $(tileCanvas).attr("height", hpx);
         $(tileCanvas).attr("width", wpx);
     } else {
-        maze.initPoints();
+        maze.reset();
     }
 
 	maze.render(bgStage);
@@ -1018,6 +1017,11 @@ function toggleMusic(on) {
 }
 
 function toggleOptions() {
+  if (game_state == GAME_STATES.PAUSED) {
+		unpause();
+	} else {
+		pause();
+	}
   $("#lightbox").toggle();
 }
 
@@ -1063,33 +1067,69 @@ function init_levels() {
 /* I/O functions                     */
 /*************************************/
 
-function onKeyDown($evt){
-	$evt.preventDefault();
-	if (game_state==GAME_STATES.READY) {
-		gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
-		//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-		//maze.render(bgStage);
-		renderObject(dragon, gameStage);
-		game_state=GAME_STATES.PLAYING;
-	}
-	if(game_state==GAME_STATES.PLAYING){
-         //Save the last direction
-		 if($evt.keyCode==LEFT_ARROW){
-			 nextDir = "left";
-		 }
-		 if ($evt.keyCode==RIGHT_ARROW){
-			 nextDir = "right";
-		 }
-		 if ($evt.keyCode==DOWN_ARROW){
-			 nextDir = "down";
-		 }
-		 if ($evt.keyCode==UP_ARROW){
-			 nextDir = "up";
-	  	 }
-	} else {
-		gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
-		bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-		maze_init();
+function onKeyDown(evt){
+	evt.preventDefault();
+	switch(game_state) {
+		case GAME_STATES.PAUSED:
+			switch(evt.keyCode) {
+				case ESC:
+					toggleOptions();
+					break;
+				default:
+					//Do nothing
+			}
+			break;
+		case GAME_STATES.READY:
+			switch(evt.keyCode) {
+				case LEFT_ARROW:
+				case RIGHT_ARROW:
+				case DOWN_ARROW:
+				case UP_ARROW:
+					gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
+					//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+					//maze.render(bgStage);
+					renderObject(dragon, gameStage);
+					game_state=GAME_STATES.PLAYING;
+					break;
+				default:
+					//Do nothing
+			}
+		case GAME_STATES.PLAYING:
+			switch (evt.keyCode) {
+	         	//Store in nextDir to save the last direction
+				case LEFT_ARROW:
+					nextDir = "left";
+					break;
+				case RIGHT_ARROW:
+					nextDir = "right";
+					break;
+				case DOWN_ARROW:
+					nextDir = "down";
+					break;
+				case UP_ARROW:
+					nextDir = "up";
+					break;
+				case ESC:
+					toggleOptions();
+					break;
+				default:
+					//Do nothing
+			}
+			break;
+		default:
+			switch(evt.keyCode) {
+				case LEFT_ARROW:
+				case RIGHT_ARROW:
+				case DOWN_ARROW:
+				case UP_ARROW:
+					//Only start if you've picked a direction to go in
+					gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
+					bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+					maze_init();
+					break;
+				default:
+					//Do nothing
+			}
 	}
 }
 
@@ -1118,6 +1158,18 @@ function onKeyDown($evt){
 //        window.msCancelRequestAnimationFrame        ||
 //        window.clearTimeout;
 //} )();
+
+function pause() {
+	PREPAUSE_GAME_STATE = game_state;
+	game_state = GAME_STATES.PAUSED;
+	stopGameLoop();
+}
+
+function unpause() {
+	game_state = PREPAUSE_GAME_STATE;
+	PREPAUSE_GAME_STATE = undefined;
+	startGameLoop();
+}
 
 
 function startGameLoop() {
@@ -1205,9 +1257,9 @@ function update() {
 
 	        var xy = maze.grid2canvas(oldR,oldC);
 	        gameStage.clearRect(xy[0]+dragon.xOffset,xy[1]+dragon.yOffset,
-		  xy[0]+dragon.img.width*SPRITE_SCALE,
-		  xy[1]+dragon.img.height*SPRITE_SCALE);
-                switch(lastDir) {
+		    xy[0]+dragon.img.width*SPRITE_SCALE,
+		    xy[1]+dragon.img.height*SPRITE_SCALE);
+            switch(lastDir) {
                     case "start":
                         switch(dir) {
                             case "left":
@@ -1281,29 +1333,25 @@ function update() {
                         }
                         break;
                     default:
-                         case "right":
-                             renderObject(maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision)), bgStage);
-                             break;
-                         case "left":
-                             renderObject(maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision)), bgStage);
-                             break;
-                         case "up":
-                             renderObject(maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision)), bgStage);
-                             break;
-                         case "down":
-                             renderObject(maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision)), bgStage);
-                             break;
-                        
-                        break;
-
-                    }
-                
-                lastDir = dir;
-                }
-
+						switch(dir) {
+                         	case "right":
+	                             renderObject(maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision)), bgStage);
+	                             break;
+	                         case "left":
+	                             renderObject(maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision)), bgStage);
+	                             break;
+	                         case "up":
+	                             renderObject(maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision)), bgStage);
+	                             break;
+	                         case "down":
+	                             renderObject(maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision)), bgStage);
+	                             break;                        
+						}
+                }                
+			lastDir = dir;
+          }
         }
 	}
-
 /*
  * updates the current score by adding p points to it
  */
