@@ -16,6 +16,8 @@ var MAX_COLS = Math.floor(900/GRID_W);
 var MAX_ROWS = Math.floor(500/GRID_H);
 var DEFAULT_WALL_YOFFSET = -10*SPRITE_SCALE;	//Need to get rid of this hack eventually
 var DEFAULT_STARTPT_YOFFSET = -13*SPRITE_SCALE;
+var DEFAULT_GOAL_YOFFSET = -GRID_H;
+var DEBUG = false;
 var BORDER_IMG; 
 var SNAKE_IMG; 
 var GOAL_IMG; 
@@ -45,6 +47,7 @@ var PILLAR_IMG;
 var VERTICAL_WALL_IMG;
 var HORIZONTAL_WALL_IMG;
 var DELETE_IMG;
+var PIX_IMG;
 var WALL_9S_TL_IMG;
 var WALL_9S_TC_IMG;
 var WALL_9S_TR_IMG;
@@ -238,7 +241,7 @@ function WallPoint(r,c)  {
  * dest: an int ID for another maze where this goal will take you.
  */ 
 function GoalPoint(r, c, dest)  {
-	var pt = new Point(PORTAL_IMG, r, c, mazeComplete(dest), TYPES.GOAL);
+	var pt = new Point(PORTAL_IMG, r, c, mazeComplete(dest), TYPES.GOAL, DEFAULT_GOAL_YOFFSET);
 	pt.destination = dest;
 	return pt;
 }
@@ -292,9 +295,11 @@ Maze.prototype.unsetStart = function() {
 	this.sc = undefined;	
 }
 
+//Given a row and a column, returns an array with x and y pixel coordinates
 Maze.prototype.grid2canvas= function (r, c) {
-	return [(c-1) * GRID_W + this.xOffset,
-            (r-1) * GRID_H + this.yOffset];
+	return {"x" : ((c-1) * GRID_W + this.xOffset),
+            "y" : ((r-1) * GRID_H + this.yOffset)
+			};
 }
 
 Maze.prototype.getCenterX = function () {
@@ -451,7 +456,7 @@ Maze.prototype.fixWallImages = function() {
 
 			if (this.isType(i,j,TYPES.GOAL) && 
 						(i == 0 || i == this.rows-1 || j == 0 || j == this.cols-1)) {
-						this.points[i][j].img=undefined;
+						this.points[i][j].img = (DEBUG) ? PIX_IMG : undefined;
 	          			this.points[i][j].yOffset=0;
 			} else if (this.isType(i,j,TYPES.WALL)) {
 					//TODO: fixme! Reset wall offset
@@ -915,10 +920,10 @@ function loadAssets() {
 						WALL_9S_MCBL_IMG=
 						WALL_9S_MC_IMG;
 
-
 				//Only used in level builder
-        DELETE_IMG = createImgAsset("delete", 
-            "<%= asset_path('delete.png') %>");
+        		DELETE_IMG = createImgAsset("delete", 
+		            "<%= asset_path('delete.png') %>");
+				PIX_IMG = createImgAsset('pix_1x1', "<%= asset_path('1x1.gif') %>");
 
     }
 }
@@ -1265,12 +1270,6 @@ function stopGameLoop() {
     window.clearTimeout(request);
 }
 
-//Prints the game state string in the center of the maze
-function printState () {
-	gameStage.drawTextCenter("sans", 16, maze.getCenterX(), 
-                    maze.getCenterY(), game_state); 
-}
-
 function update() {
     //gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
     //maze.render(bgStage);
@@ -1333,9 +1332,9 @@ function update() {
     		}
 
 	        var xy = maze.grid2canvas(oldR,oldC);
-	        gameStage.clearRect(xy[0]+dragon.xOffset,xy[1]+dragon.yOffset,
-		    xy[0]+dragon.img.width*SPRITE_SCALE,
-		    xy[1]+dragon.img.height*SPRITE_SCALE);
+	        gameStage.clearRect(xy.x+dragon.xOffset,xy.y+dragon.yOffset,
+		    xy.x+dragon.img.width*SPRITE_SCALE,
+		    xy.y+dragon.img.height*SPRITE_SCALE);
             switch(lastDir) {
                     case "start":
                         switch(dir) {
@@ -1429,38 +1428,58 @@ function update() {
           }
         }
 	}
-/*
- * updates the current score by adding p points to it
- */
+
+
+/*************************************/
+/* Rendering functions               */
+/*************************************/
+
+// updates the current score by adding p points to it
 function updateScore(p) {
        SCORE += p;
 }
 
-/*
- * prints the new score
- */
+//Prints the game state string in the center of the maze
+function printState () {
+	gameStage.drawTextCenter("sans", 16, maze.getCenterX(), maze.getCenterY(), game_state); 
+}
+
+//Prints text at x and y on the given stage
+function stagePrint(text, x, y, stage) {
+	stage.fillStyle = '#000';
+	stage.font = '12px sans-serif';
+	stage.textBaseline = 'top';
+	stage.fillText(text, x, y);
+}
+
+
+// prints the new score
 function renderScore() {
         $('#total_score').text(TOTAL_SCORE);
         $('#level_score').text(LEVEL_SCORE);
         $('#current_level').text(CURRENT_LEVEL+1);
 }
 
-/*************************************/
-/* Rendering functions               */
-/*************************************/
-
+/*
+* Default rendering engine
+*/
 function renderObject($obj, stage) {
 	if ($obj.img == undefined){ return; }
 	var xy=maze.grid2canvas($obj.r, $obj.c);
-    var x = xy[0]+$obj.xOffset;
-    var y = xy[1]+$obj.yOffset;
+    var x = xy.x+$obj.xOffset;
+    var y = xy.y+$obj.yOffset;
 //    if (ISOMETRIC) {
 //	    x=getScreenX(x,y)+$obj.xOffset;
 //	    y=getScreenY(x,y)+$obj.yOffset;
 //    }
 	try {
 		stage.drawImage($obj.img,x,y, $obj.img.width*SPRITE_SCALE, $obj.img.height*SPRITE_SCALE);
-	} catch($error) {}
+		if ($obj.obj_type && $obj.obj_type == TYPES.GOAL && DEBUG) {
+			stagePrint($obj.destination, xy.x+Math.floor(GRID_W/2), xy.y, stage);
+		}
+	} catch($error) {
+		console.log("Error drawing image: "+ $error.message)
+	}
 }
 
 /* Only used in Isometric mode */
