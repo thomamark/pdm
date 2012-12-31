@@ -23,6 +23,11 @@
 				line-height: 100px;
 				vertical-align: middle;
 			}
+			
+			.toolbar img {
+				display: block;
+				margin: auto;
+			}
 
 			.toolbar li:hover {
 				border: solid 1px #888;
@@ -41,202 +46,224 @@
 				top: auto;
 				left: auto;
 			}
+			
+			.invalid {
+				background-color: #FA6B8D;
+			}
 
 		</style>
 
 		<script>
-			//var SPRITE_SCALE = 1;
-			//var GRID_W = 32*SPRITE_SCALE;
-			//var GRID_H = 16*SPRITE_SCALE;
-      INIT_GAME = false; //var defined in maze.js which
-			var selectedId;
-			var selectedImg;
-			var selectedObj;
-			var startPos;
-      var IMGS;
-			var OBJS;
-			var oldR =-1;
-			var oldC = -1;
-			var MOUSE_DOWN = false;
-			//var canvasX = -1;
-			//var canvasY = -1;
+		//var SPRITE_SCALE = 1;
+		//var GRID_W = 32*SPRITE_SCALE;
+		//var GRID_H = 16*SPRITE_SCALE;
+     	INIT_GAME = false; //var defined in maze.js which
+		var selectedId;
+		var selectedImg;
+		var selectedObj;
+		var startPos;
+     	var IMGS;
+		var OBJS;
+		var oldR =-1;
+		var oldC = -1;
+		var MOUSE_DOWN = false;
+		var GOAL_DEST = 0;
+		//var canvasX = -1;
+		//var canvasY = -1;
 
-			//For rendering the delete image while hovering
-			function DeletePoint(r,c) {
-			  return new Point(DELETE_IMG, r, c, function () {});
+		//For rendering the delete image while hovering
+		function DeletePoint(r,c) {
+			return new Point(DELETE_IMG, r, c, function () {});
+		}
+		          
+		function select() {
+			$('li').each(function (i, el) { $(el).removeClass('selected');});
+			selectedId = this.id;
+			selectedImg = IMGS[this.id];
+			selectedObj = POINTS[this.id];
+			//selectedObj = OBJS[this.id];
+			$(this).addClass('selected');
+		}
+		
+		/* Tests to see if the destination entered is valid */			
+		function isValidDestination(d) {
+			return typeof d === 'number' && !isNaN(d) && d % 1 == 0 && d >= 0;
+		}
+		
+		function renderGoal() {
+			$('#'+TYPES.GOAL).append("<div style='display: inline; position: relative; clear: both;'>" +
+				"<span style='font-size: 10px'>Dest: </span><input type='text' id='dest_text' size='4' value='" + GOAL_DEST + "'/>");
+			$('#dest_text').blur(function () {
+				var d = parseInt($('#dest_text').val());
+				if (!isValidDestination(d)) {
+					$('#dest_text').val(GOAL_DEST);
+					$('#dest_text').removeClass("invalid");
+				}
+			});
+			$('#dest_text').keyup(function () {
+				var d = parseInt($('#dest_text').val());
+				if (isValidDestination(d)) {
+					GOAL_DEST = d;
+					$('#dest_text').val(d);
+					$('#dest_text').removeClass("invalid");
+				} else {
+					$('#dest_text').addClass("invalid");
+				}
+			});
+		}
+
+		function findPos(obj) {
+			    var curleft = 0, curtop = 0;
+			    if (obj.offsetParent) {
+			        do {
+			            curleft += obj.offsetLeft;
+			            curtop += obj.offsetTop;
+			        } while (obj = obj.offsetParent);
+			        return { x: curleft, y: curtop };
+			    }
+			    return undefined;
+		}
+		$(document).ready( function () {
+
+			/* holds functions which are called when an object is selected */
+			RENDERFN = {};
+			RENDERFN[TYPES.GOAL] = renderGoal;
+
+			maze = new Maze("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000002000100000200000301010000000000000100000000000301010000000000000100000000000301010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101");
+
+			//Find current max enum value and use that for delete
+			var max = -1;
+			for (var t in TYPES) {
+				if (TYPES[t] != TYPES.BLANK) {
+					max = Math.max(TYPES[t], max);
+					$("#objs").append("<li id='"+TYPES[t]+"'></li>");
+				}
+				if (RENDERFN[TYPES[t]]) { 
+					RENDERFN[TYPES[t]]();
+				}
 			}
-           
-			function select() {
-				$('li').each(function (i, el) { $(el).removeClass('selected');});
-				selectedId = this.id;
-				selectedImg = IMGS[this.id];
-				selectedObj = OBJS[this.id];
-				$(this).addClass('selected');
-			}
+			TYPES["DELETE"] = max + 1;
+			POINTS[TYPES.DELETE] = DeletePoint;
+			$("#objs").append("<li id='"+TYPES.DELETE+"'></li>");
 
-			function findPos(obj) {
-				    var curleft = 0, curtop = 0;
-				    if (obj.offsetParent) {
-				        do {
-				            curleft += obj.offsetLeft;
-				            curtop += obj.offsetTop;
-				        } while (obj = obj.offsetParent);
-				        return { x: curleft, y: curtop };
-				    }
-				    return undefined;
-			}
-
-      $(document).ready( function () {
-					maze = new Maze("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101");
-
-					OBJS = {
-            "wall" : WallPoint,
-            "panda" : PandaPoint,
-            "goal" : GoalPoint,
-            "start" : StartPoint,
-            "delete" : DeletePoint
-						}
-
-        gameCanvas = document.getElementById('maze-canvas');
-        bgCanvas = document.getElementById('maze-canvas-background');
-				tileCanvas = document.getElementById('tile-canvas');
-        gameStage = gameCanvas.getContext("2d");
-        bgStage = bgCanvas.getContext("2d");
-        tileStage = tileCanvas.getContext("2d");
-				var hpx = MAX_ROWS*GRID_H+WALL_PAD;
-				var wpx = MAX_COLS*GRID_W;
+	        gameCanvas = document.getElementById('maze-canvas');
+	        bgCanvas = document.getElementById('maze-canvas-background');
+			tileCanvas = document.getElementById('tile-canvas');
+	        gameStage = gameCanvas.getContext("2d");
+	        bgStage = bgCanvas.getContext("2d");
+	        tileStage = tileCanvas.getContext("2d");
+			var hpx = MAX_ROWS*GRID_H+WALL_PAD;
+			var wpx = MAX_COLS*GRID_W;
 				
-        $('#maze-canvas').attr("height", hpx);
-        $('#maze-canvas').attr("width", wpx);
-        $('#maze-canvas-background').attr("height", hpx);
-        $('#maze-canvas-background').attr("width", wpx);
-        $('#tile-canvas').attr("height", hpx);
-        $('#tile-canvas').attr("width", wpx);
+	        $('#maze-canvas').attr("height", hpx);
+	        $('#maze-canvas').attr("width", wpx);
+	        $('#maze-canvas-background').attr("height", hpx);
+	        $('#maze-canvas-background').attr("width", wpx);
+	        $('#tile-canvas').attr("height", hpx);
+	        $('#tile-canvas').attr("width", wpx);
 
-        $('#maze-canvas').height(hpx);
-        $('#maze-canvas').width(wpx);
-        $('#maze-canvas-background').height(hpx);
-        $('#maze-canvas-background').width(wpx);
-        $('#tile-canvas').height(hpx);
-        $('#tile-canvas').width(wpx);
+	        $('#maze-canvas').height(hpx);
+	        $('#maze-canvas').width(wpx);
+	        $('#maze-canvas-background').height(hpx);
+	        $('#maze-canvas-background').width(wpx);
+	        $('#tile-canvas').height(hpx);
+	        $('#tile-canvas').width(wpx);
 				
-//				var mazeClick = function (e, d) {
-//					if (!maze.hasPoint(curR,curC)) {
-//						maze.addPoint(new selectedObj(curR, curC));
-//						maze.fixWallImages();
-//						bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-//          	maze.render(bgStage);
-//					}
-//				}
-	
-					
-			  $('#maze-canvas').mousedown(function(e) {
-						MOUSE_DOWN = true;
-					  $('#maze-canvas').trigger('mazeClick');
-				});
-			  $('#maze-canvas').mouseup(function(e) {MOUSE_DOWN = false;});
-				
-			  $('#maze-canvas').bind('mazeClick', function(e) {
-			  //$('#maze-canvas').click(function(e) {
-					if (selectedId == "delete"){
-						//Don't delete borders unless this is a goal
-						//Borders are either goals or walls
-						if (!(curR <= 1 || curR >= maze.rows || 
-									curC <= 1 ||curC >= 	maze.cols)) {
-								maze.removePoint(curR, curC);
-								if (startPos && curR == startPos.r && curC == startPos.c) {
-											startPos = undefined;
-								}
-						} else if (maze.isType(curR-1, curC-1, TYPES.GOAL)) {
-								maze.removePoint(curR, curC);
-								maze.addPoint(new OBJS["wall"](curR, curC));
-						}
-					} else if (!maze.hasPoint(curR,curC)) {
-						if (selectedId == "start") {
-							if (startPos) {
-									maze.removePoint(startPos.r, startPos.c);
-									startPos.r = curR;
-									startPos.c = curC;
-							} else {
-								startPos = {"r" : curR, "c" : curC};
+	//				var mazeClick = function (e, d) {
+	//					if (!maze.hasPoint(curR,curC)) {
+	//						maze.addPoint(new selectedObj(curR, curC));
+	//						maze.fixWallImages();
+	//						bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+	//          	maze.render(bgStage);
+	//					}
+	//				}
+
+			$('#maze-canvas').mousedown(function(e) {
+				MOUSE_DOWN = true;
+				$('#maze-canvas').trigger('mazeClick');
+			});
+			
+		  	$('#maze-canvas').mouseup(function(e) {MOUSE_DOWN = false;});
+			$('#maze-canvas').bind('mazeClick', function(e) {
+				//$('#maze-canvas').click(function(e) {
+				if (selectedId == TYPES.DELETE){
+					//Don't delete borders unless this is a goal
+					//Borders are either goals or walls
+					if (!(curR <= 1 || curR >= maze.rows || curC <= 1 ||curC >= maze.cols)) {
+							maze.removePoint(curR, curC);
+							if (startPos && curR == startPos.r && curC == startPos.c) {
+								startPos = undefined;
 							}
-						}
-						maze.addPoint(new selectedObj(curR, curC));
-					} else if (selectedId == "goal" && (curR == 1 || curR == maze.rows || curC == 1 || curC == maze.cols)) {
-						maze.removePoint(curR, curC);
-						maze.addPoint(new selectedObj(curR, curC));
+					} else if (maze.isType(curR-1, curC-1, TYPES.GOAL)) {
+							maze.removePoint(curR, curC);
+							maze.addPoint(new POINTS[TYPES.WALL](curR, curC));
 					}
-					maze.fixWallImages();
-					bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-         			maze.render(bgStage);
-				});
-
-			  $('#maze-canvas').mousemove(function(e) {
-					    var pos = findPos(this);
-					    var x = e.pageX - pos.x;
-					    var y = e.pageY - pos.y;
-							curC = Math.ceil(x/GRID_W);
-							curR = Math.ceil(y/GRID_H);
-							//$('#cx').text(x);
-							//$('#cy').text(y);
-							//$('#cr').text(curR);
-							//$('#cc').text(curC);
-							if (selectedId && !(curR == oldR && curC == oldC))	{
-								//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-                //maze.render();
-								gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
-								renderObject(new selectedObj(curR, curC), gameStage);
-								oldR = curR;
-								oldC = curC;
-								if (MOUSE_DOWN) {$('#maze-canvas').trigger('mazeClick');}
-							}
-//					    var coordinateDisplay = "x=" + x + ", y=" + y;
-//					    writeCoordinateDisplay(coordinateDisplay);
-					});
-			  
-        init(function () {
-          //wait until images are actually loaded
-          IMGS = {
-            "wall" : WALL_BLOCK_IMG,
-            "panda" : PANDA_IMG,
-            "goal" : PORTAL_IMG,
-            "start" : HEAD_DOWN_IMG, 
-            "delete" : DELETE_IMG
+				} else if (!maze.hasPoint(curR,curC)) {
+					if (selectedId == TYPES.START) {
+						if (startPos) {
+								maze.removePoint(startPos.r, startPos.c);
+								startPos.r = curR;
+								startPos.c = curC;
+						} else {
+							startPos = {"r" : curR, "c" : curC};
 						}
+						//The StartPoint object won't actually be added to the maze, so add a placeholder
+						//Note that the toString function will ignore points without types, so this is fine.
+						maze.addPoint(new Point(HEAD_DOWN_IMG, curR, curC, undefined, undefined, DEFAULT_STARTPT_YOFFSET))
+					}
+					maze.addPoint(new selectedObj(curR, curC));
+				} else if (selectedId == TYPES.GOAL && (curR == 1 || curR == maze.rows || curC == 1 || curC == maze.cols)) {
+					maze.removePoint(curR, curC);
+					maze.addPoint(new selectedObj(curR, curC, GOAL_DEST));
+				}
+				maze.fixWallImages();
+				bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+	       		maze.render(bgStage);
+			});
 
-					  maze.setSize(MAX_ROWS, MAX_COLS);
-					  maze.initPoints();
-					  maze.addBorders();
-          	maze.render(bgStage);
-
-				  	$('li').each( function (i, el) {
-				      $(el).click(select);
-              $(el).append("<img src='"+IMGS[el.id].src+"' />");
-					  	//COUNTS[el.id] = 0;
-				   	});
-          })
+		  $('#maze-canvas').mousemove(function(e) {
+				    var pos = findPos(this);
+				    var x = e.pageX - pos.x - maze.xOffset;
+				    var y = e.pageY - pos.y - maze.yOffset;
+					curC = Math.ceil(x/GRID_W);
+					curR = Math.ceil(y/GRID_H);
+					// $('#cx').text(x);
+					// $('#cy').text(y);
+					// $('#cr').text(curR);
+					// $('#cc').text(curC);
+					if (selectedId && !(curR == oldR && curC == oldC))	{
+						//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+              			//maze.render();
+						gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
+						renderObject(new selectedObj(curR, curC), gameStage);
+						oldR = curR;
+						oldC = curC;
+						if (MOUSE_DOWN) {$('#maze-canvas').trigger('mazeClick');}
+					}
+//			    var coordinateDisplay = "x=" + x + ", y=" + y;
+//			    writeCoordinateDisplay(coordinateDisplay);
+			});
+			  
+	        init(function () {
+	          //wait until images are actually loaded
+	          	IMGS = {};
+				IMGS[TYPES.WALL] = WALL_BLOCK_IMG;
+				IMGS[TYPES.PANDA] = PANDA_IMG;
+	            IMGS[TYPES.GOAL] = PORTAL_IMG;
+	            IMGS[TYPES.START] = HEAD_DOWN_IMG;
+	            IMGS[TYPES.DELETE] = DELETE_IMG;
+				maze.setSize(MAX_ROWS, MAX_COLS);
+				maze.initPoints();
+				maze.addBorders();
+			    maze.render(bgStage);
+				$('li').each( function (i, el) {
+					$(el).click(select);
+					$(el).prepend("<img src='"+IMGS[el.id].src+"' />");
 				});
+	          });
+			});
 		</script>
-	<!-- what matters:
-				shared code
-					tile size
-					canvas size
-					wall rendering
-					game engine/play (for preview)
-				
-				elements;
-					walls
-					goals
-					pandas
-					start position
-					delete
-
-				P0 features:
-					add element
-					remove element
-					render walls correctly
-					export map creation code
-
+		<!-- what matters:
 				P1 features:
 					preview/preplay
 					export map
@@ -251,13 +278,14 @@
 
 
 		<div class="toolbar">
-			<ul class="toolbar">
+			<ul class="toolbar" id="objs">
         <!-- Images added via js  -->
-				<li id="wall"></li>
+<!--				<li id="wall"></li>
 				<li id="panda"></li>
 				<li id="goal"></li>
-        <li id="start"></li>
+		        <li id="start"></li>
 				<li id="delete"></li>
+				-->
 			</ul>
 		</div>
 		<!--

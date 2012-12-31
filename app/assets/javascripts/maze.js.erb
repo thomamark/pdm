@@ -1,4 +1,4 @@
-/* Copyright 2011 Mark Thomas (mr.thomas gmail)
+/* Copyright 2013 Mark Thomas (mr.thomas gmail)
 */
 
 /*************************************/
@@ -9,11 +9,13 @@
 var SPRITE_SCALE = 2;
 var BASE_W = 32;
 var BASE_H= 16;
-var GRID_W = 32*SPRITE_SCALE;
-var GRID_H = 16*SPRITE_SCALE;
+var GRID_W = BASE_W*SPRITE_SCALE;
+var GRID_H = BASE_H*SPRITE_SCALE;
 var WALL_PAD=10*SPRITE_SCALE;
 var MAX_COLS = Math.floor(900/GRID_W);
 var MAX_ROWS = Math.floor(500/GRID_H);
+var DEFAULT_WALL_YOFFSET = -10*SPRITE_SCALE;	//Need to get rid of this hack eventually
+var DEFAULT_STARTPT_YOFFSET = -13*SPRITE_SCALE;
 var BORDER_IMG; 
 var SNAKE_IMG; 
 var GOAL_IMG; 
@@ -66,7 +68,8 @@ var INIT_GAME = true;
 
 
 /* Maze encoding variables */
-var ENC_W = 2; //num of hex digits per square in a string
+var ENC_W = 2; //num of digits per point in a string
+var DEFAULT_BASE = 16; //Default digit base for string output (currently hexadecimal)
 var WI = 0;
 var SIZEI = 1;
 
@@ -117,7 +120,7 @@ var TYPES = {
 	WALL : 1,
 	PANDA : 2,
 	GOAL: 3,
-	START: 4
+	START: 4, 
 }
 
 var POINTS = {};
@@ -154,41 +157,100 @@ var THEME;
  @arg r the row of this object in the maze grid
  @arg c the column of this objection in the maze grid
  @arg isOnFn the function which will be called if the dragon lands on this point
+ @arg pointType the type ID for this point
+ @arg yoff optional yoffset in pixels
+ @arg xoff optiona xoffset in pixels
 */
-function Point(img,r, c, isOnFn, pointType) {
+function Point(img,r, c, isOnFn, pointType, yoff, xoff) {
 	this.img=img;
 	this.r=r;
 	this.c=c;
-    //function telling the system what to do if the dragon lands on this point.
     this.isOn = isOnFn;
-
-//	this.yOffset=0-$img.height;
-//	this.xOffset=-12;
-	this.yOffset=0;
-	this.xOffset=0;
+	this.yOffset= (yoff) ? yoff : 0;
+	this.xOffset= (xoff) ? xoff : 0;
     this.obj_type=pointType;
 }
 
-
-// A Wall in the maze
-function WallPoint(r,c)  {
-	return new Point(WALL_BLOCK_IMG, r, c, mazeCollision, TYPES.WALL);
+/*
+ * Returns an object with two components
+ *   - obj.pt the first point object encoded in the given string or undefined if blank
+ *   - obj.n (num_chars_read_from_s)/pad_w
+ * Arguments:
+ * s a string with the first pad_w digits specifying a point type
+ * r the row for this point
+ * c the column for this point 
+ * base the base in which elements in this string have been encoded
+ * pad_w the encoding width in number of digits in base for each point 
+ */
+function PointFactory (s, r, c, base, pad_w) {
+	var base = (base) ? base : DEFAULT_BASE;
+	var pad_w = (pad_w) ? pad_w : ENC_W;
+	var n = 1;
+	var t = parseInt(s.substring(0, pad_w), base);
+	var pt = undefined;
+	
+	switch (t) {
+		case TYPES.GOAL:
+			// Next encoded digit specifies destination
+			var d = parseInt(s.substring(pad_w, 2*pad_w), base);
+			n += 1;
+			pt = new POINTS[t](r,c,d);
+			break;
+		case TYPES.BLANK:
+			//Blank points should keep the point undefined, so do nothing here.
+			break;
+		default:
+			//Simple version for most points
+			pt = new POINTS[t](r,c);
+	}
+	return {"pt" : pt, "n" : n };
 }
 
-//A goal
-function GoalPoint(r,c)  {
-	//TODO: add ability to have different results for different goals
-	return new Point(PORTAL_IMG, r, c, mazeComplete, TYPES.GOAL);
+/* Encodes the point as a string. See Maze.prototype.toString for more information. */
+Point.prototype.toString = function(base, pad_w){
+	//Set default vars
+	var base = (base) ? base : DEFAULT_BASE;
+	var pad_w = (pad_w) ? pad_w : ENC_W;
+	switch(this.obj_type) {
+		case TYPES.GOAL:
+			if (!this.destination) {
+				throw "Error: goal point at " + this.r + ", " + this.c + " has no destination!"
+				return undefined;
+			} else {
+				return pad(Number(this.obj_type).toString(base), pad_w) + pad(Number(this.destination).toString(base), pad_w);
+			}
+			break;
+		case undefined:
+			console.log("Warning: point at " + this.r + "," + this.c + " has no type! Assuming it is blank.");
+			return pad(Number(TYPES.BLANK.toString(base), pad_w));
+			break;
+		default:
+			return pad(Number(this.obj_type.toString(base), pad_w));
+	}
+}
+
+/* A Wall in the maze */
+function WallPoint(r,c)  {
+	return new Point(WALL_BLOCK_IMG, r, c, mazeCollision, TYPES.WALL, DEFAULT_WALL_YOFFSET);
+}
+
+/* A goal. 
+ * dest: an int ID for another maze where this goal will take you.
+ */ 
+function GoalPoint(r, c, dest)  {
+	var pt = new Point(PORTAL_IMG, r, c, mazeComplete(dest), TYPES.GOAL);
+	pt.destination = dest;
+	return pt;
 }
 
 //A Panda
 function PandaPoint(r,c) {
-  return  new Point(PANDA_IMG, r, c, collectBonus, TYPES.PANDA);
+	return new Point(PANDA_IMG, r, c, collectBonus, TYPES.PANDA, -20, 10);
 }
 
 //Dragon starting point
 function StartPoint(r,c) {
-	return new Point(HEAD_DOWN_IMG, r, c, function () {}, TYPES.START);
+	return new Point(HEAD_DOWN_IMG, r, c, function () {}, TYPES.START, DEFAULT_STARTPT_YOFFSET);
 }
 
 //Special point for background tiles. These are used initially to render
@@ -205,6 +267,8 @@ function Maze (s) {
     this.gotBonuses = 0;
 	this.s = s;
 	this.load(s);
+	this.xOffset = 0;
+	this.yOffset = -DEFAULT_WALL_YOFFSET;
 }
 
 Maze.prototype.reset = function() {
@@ -229,8 +293,8 @@ Maze.prototype.unsetStart = function() {
 }
 
 Maze.prototype.grid2canvas= function (r, c) {
-	return [(c-1) * GRID_W,
-            (r-1) * GRID_H];
+	return [(c-1) * GRID_W + this.xOffset,
+            (r-1) * GRID_H + this.yOffset];
 }
 
 Maze.prototype.getCenterX = function () {
@@ -287,28 +351,29 @@ Maze.prototype.removeBorders = function () {
 	}
 }
 
-Maze.prototype.toString = function () {
-	/* Maze string representation:
-	*  1 hex digit for number of hex digits per square (N)
-	*  N hex digits for num rows (R)
-	*  N hex digits for num cols (C)
-	*  N hex digits for each of the RxC squares in the maze
-	*/
+//Fn for extending the length of a hex string to <width> chars
+function pad (hexstr, width) {
+	var p = width - hexstr.length;
+	if (p >0) { return Array(p+1).join("0")+hexstr; }
+	else if (p<0) { throw "Too long to encode into a Maze string "+hexstr;}
+	else { return hexstr; }
+};
 
-	//Fn for extending the length of a hex string to <width> chars
-	var pad = function (hexstr, width) {
-		var p = width - hexstr.length;
-		if (p >0) { return Array(p+1).join("0")+hexstr; }
-		else if (p<0) { throw "Too long to encode into a Maze string "+hexstr;}
-		else { return hexstr; }
-	};
-	var s = ""+Number(ENC_W).toString(16) + 
-					pad(Number(this.rows).toString(16), ENC_W) +
-					pad(Number(this.cols).toString(16),ENC_W);
+/* Returns a string representation of this maze
+*  Maze string representation:
+*  1 hex digit for number of hex digits per square (N)
+*  N hex digits for num rows (R)
+*  N hex digits for num cols (C)
+*  N hex digits for each of the RxC squares in the maze
+*/
+Maze.prototype.toString = function () {
+	var s = "" + Number(ENC_W).toString(DEFAULT_BASE) + 
+					pad(Number(this.rows).toString(DEFAULT_BASE), ENC_W) +
+					pad(Number(this.cols).toString(DEFAULT_BASE),ENC_W);
 	try {
 		for (var i = 0; i< this.rows; i++) {
 			for ( var j = 0; j<this.cols; j++) {
-				s+= pad( Number((this.points[i][j]) ? this.points[i][j].obj_type : 0).toString(16), ENC_W);
+				s+= (this.points[i][j]) ? this.points[i][j].toString(DEFAULT_BASE, ENC_W) : pad( Number(TYPES.BLANK).toString(DEFAULT_BASE), ENC_W);
 			}
 		}
 	} catch (err){
@@ -322,22 +387,30 @@ Maze.prototype.toString = function () {
 /* Constructs a maze given a string rep of a maze (see toString above) */
 Maze.prototype.load = function(s) {
 	try {
-		var w      = parseInt(s.charAt(WI), 16);
-		var rows   = parseInt(s.substring(SIZEI,SIZEI+w), 16);
-		var cols   = parseInt(s.substring(SIZEI+w, SIZEI+2*w), 16); 
-		var HEADL  = SIZEI+2*w;
-		if (s.length != HEADL + rows*cols*w) {
-			throw "Invalid maze string length. Expected: "+(HEADL+rows*cols*w) + " Actual: " + s.length;
-		}
+		var base = 16; //TODO: need to read this from the string.
+		var w      = parseInt(s.charAt(WI), base);
+		var rows   = parseInt(s.substring(SIZEI,SIZEI+w), base);
+		var cols   = parseInt(s.substring(SIZEI+w, SIZEI+2*w), base); 
+		var head_len  = SIZEI+2*w;
+		//FIXME: not as easy to verify length of string when points contain extra info (e.g. goal points)
+		// if (s.length != head_len + rows*cols*w) {
+		// 	throw "Invalid maze string length. Expected: "+(head_len+rows*cols*w) + " Actual: " + s.length;
+		// }
 		this.setSize(rows, cols);
 		this.initPoints();
-		for (var i = HEADL; i < rows*cols*w+HEADL; i+=w){
-			var p    = Number(s.substring(i, i+w).toString(16));
-			if (p != TYPES.BLANK) {
-				var c = (((i-HEADL)/w) % cols) +1;	
-				var r = Math.floor(((i-HEADL)/w) / this.cols) +1;	
-				if (!POINTS[p]) { throw "Unknown point type found: " + p;}
-				this.addPoint(new POINTS[p](r, c));
+		var r = 1;
+		var c = 1;
+		for (var i = head_len; i < s.length; i+=w) {
+			var pt_n    = PointFactory(s.substring(i, s.length), r, c, base, w);
+			i += (pt_n.n - 1) * w;	//If we read more than one encoded char, advance the incr accordingly
+			if (pt_n.pt) { 
+				this.addPoint(pt_n.pt); 
+			}		
+			//Keep track of which row/column we're on. Note that maze is loaded in columns-first order.
+			c += 1;
+			if (c > this.cols) {
+				c = 1;
+				r += 1;
 			}
 		}
 		if (!(this.getStart()[0] && this.getStart()[1])) {
@@ -379,8 +452,10 @@ Maze.prototype.fixWallImages = function() {
 			if (this.isType(i,j,TYPES.GOAL) && 
 						(i == 0 || i == this.rows-1 || j == 0 || j == this.cols-1)) {
 						this.points[i][j].img=undefined;
-	          this.points[i][j].yOffset=0;
+	          			this.points[i][j].yOffset=0;
 			} else if (this.isType(i,j,TYPES.WALL)) {
+					//TODO: fixme! Reset wall offset
+					this.points[i][j].yOffset=DEFAULT_WALL_YOFFSET;
 					//Build 9-slice
 					if (this.isType(i-1,j-1,TYPES.WALL) &&
 							this.isType(i-1,j,TYPES.WALL) &&
@@ -393,7 +468,7 @@ Maze.prototype.fixWallImages = function() {
 							this.isType(i+1,j+1,TYPES.WALL)) {
 								//Middle-center wall
 								this.points[i][j].img=WALL_9S_MC_IMG;
-	              this.points[i][j].yOffset=0;
+				           //   this.points[i][j].yOffset=0;
 							} else if (
 								this.isType(i-1,j-1,TYPES.WALL) &&
 								this.isType(i-1,j,TYPES.WALL) &&
@@ -407,7 +482,7 @@ Maze.prototype.fixWallImages = function() {
 									this.isType(i+1,j,TYPES.WALL))) {
 									//Bottom-center wall
 									this.points[i][j].img=WALL_9S_BC_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (
 								!(this.isType(i-1,j-1,TYPES.WALL) &&
 									this.isType(i-1,j,TYPES.WALL)) &&
@@ -421,7 +496,7 @@ Maze.prototype.fixWallImages = function() {
 								this.isType(i+1,j+1,TYPES.WALL)) {
 									//top-center wall
 									this.points[i][j].img=WALL_9S_TC_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (
 								!(this.isType(i-1,j-1,TYPES.WALL) &&
 									this.isType(i,j-1,TYPES.WALL)) &&
@@ -435,7 +510,7 @@ Maze.prototype.fixWallImages = function() {
 								this.isType(i+1,j+1,TYPES.WALL)) {
 									//middle-left wall
 									this.points[i][j].img=WALL_9S_ML_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (
 								this.isType(i-1,j,TYPES.WALL) &&
 								this.isType(i-1,j+1,TYPES.WALL) &&
@@ -447,7 +522,7 @@ Maze.prototype.fixWallImages = function() {
 								  this.isType(i+1,j+1,TYPES.WALL))) {
 									//bottom-left wall
 									this.points[i][j].img=WALL_9S_BL_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (
 								!(this.isType(i-1,j,TYPES.WALL) &&
 									this.isType(i-1,j+1,TYPES.WALL)) &&
@@ -459,7 +534,7 @@ Maze.prototype.fixWallImages = function() {
 								this.isType(i+1,j+1,TYPES.WALL)) {
 									//top-left wall
 									this.points[i][j].img=WALL_9S_TL_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (
 								this.isType(i-1,j-1,TYPES.WALL) &&
 								this.isType(i-1,j,TYPES.WALL) &&
@@ -473,7 +548,7 @@ Maze.prototype.fixWallImages = function() {
 								this.isType(i+1,j+1,TYPES.WALL))) {
 									//middle-right wall
 									this.points[i][j].img=WALL_9S_MR_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (
 								this.isType(i-1,j-1,TYPES.WALL) &&
 								this.isType(i-1,j,TYPES.WALL) &&
@@ -485,7 +560,7 @@ Maze.prototype.fixWallImages = function() {
 									this.isType(i+1,j,TYPES.WALL))) {
 									//bottom-right wall
 									this.points[i][j].img=WALL_9S_BR_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (
 								!(this.isType(i-1,j-1,TYPES.WALL) &&
 									this.isType(i-1,j,TYPES.WALL)) &&
@@ -497,7 +572,7 @@ Maze.prototype.fixWallImages = function() {
 								this.isType(i+1,j,TYPES.WALL)) {
 									//top-right wall
 									this.points[i][j].img=WALL_9S_TR_IMG;
-	            	  this.points[i][j].yOffset=0;
+	            	  				//this.points[i][j].yOffset=0;
 							} else if (this.isType(i-1,j-1,TYPES.WALL) &&
                 this.isType(i-1,j,TYPES.WALL) &&
                 this.isType(i-1,j+1,TYPES.WALL) &&
@@ -509,7 +584,7 @@ Maze.prototype.fixWallImages = function() {
                 !this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with bottom-right missing
                     this.points[i][j].img = WALL_9S_MCBR_IMG;
-                    this.points[i][j].yOffset=0;
+                    //this.points[i][j].yOffset=0;
               } else if (this.isType(i-1,j-1,TYPES.WALL) &&
                 this.isType(i-1,j,TYPES.WALL) &&
                 this.isType(i-1,j+1,TYPES.WALL) &&
@@ -521,7 +596,7 @@ Maze.prototype.fixWallImages = function() {
                 this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with bottom-left missing
                     this.points[i][j].img = WALL_9S_MCBL_IMG;
-                    this.points[i][j].yOffset=0;
+                    //this.points[i][j].yOffset=0;
               } else if (this.isType(i-1,j-1,TYPES.WALL) &&
                 this.isType(i-1,j,TYPES.WALL) &&
                 !this.isType(i-1,j+1,TYPES.WALL) &&
@@ -533,7 +608,7 @@ Maze.prototype.fixWallImages = function() {
                 this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with top-right missing
                     this.points[i][j].img = WALL_9S_MCTR_IMG;
-                    this.points[i][j].yOffset=0;
+                    //this.points[i][j].yOffset=0;
               } else if (
                 !this.isType(i-1,j-1,TYPES.WALL) &&
                 this.isType(i-1,j,TYPES.WALL) &&
@@ -546,38 +621,38 @@ Maze.prototype.fixWallImages = function() {
                 this.isType(i+1,j+1,TYPES.WALL)) {
                     //9-slice with top-left missing
                     this.points[i][j].img = WALL_9S_MCTL_IMG;
-                    this.points[i][j].yOffset=0;
+                    //this.points[i][j].yOffset=0;
               } else if (this.isType(i,j-1,TYPES.WALL) &&
 								this.isType(i, j+1, TYPES.WALL) &&
 								(this.isType(i+1, j, TYPES.WALL) ||
 									this.isType(i-1, j, TYPES.WALL))) {
 											//Fix T-shaped and inverse T-shaped walls
 											this.points[i][j].img=WALL_BLOCK_IMG;
-	                		this.points[i][j].yOffset=0;
+	                						//this.points[i][j].yOffset=0;
 							 } else if (this.isType(i-1,j,TYPES.WALL) && 
 											this.isType(i+1,j,TYPES.WALL) &&
 											(this.isType(i,j-1,TYPES.WALL) ||
 													this.isType(i,j+1,TYPES.WALL))) {
 													//Fix -| and |- walls
 													this.points[i][j].img = WALL_BLOCK_IMG;
-                      		this.points[i][j].yOffset=0;
+                      								//this.points[i][j].yOffset=0;
 							} else if (this.isType(i-1,j,TYPES.WALL) &&
 							  this.isType(i+1,j,TYPES.WALL) &&
 							  !this.isType(i, j-1, TYPES.WALL) &&
 								!this.isType(i,j+1, TYPES.WALL)) {
-                    //Fix vertical wall image
-                    this.points[i][j].img=VERTICAL_WALL_IMG;
+                    				//Fix vertical wall image
+				                    this.points[i][j].img=VERTICAL_WALL_IMG;
            	  } else if (this.isType(i,j-1,TYPES.WALL) &&
 								this.isType(i, j+1, TYPES.WALL) &&
 								!this.isType(i-1,j, TYPES.WALL) &&
 								!this.isType(i+1,j, TYPES.WALL)) {
                     //Fix horizontal wall image
                     this.points[i][j].img=HORIZONTAL_WALL_IMG;
-                    this.points[i][j].yOffset=3*SPRITE_SCALE;
+                    this.points[i][j].yOffset=-10;
               } else {
-										//default to the pillar wall
-										this.points[i][j].img = WALL_BLOCK_IMG; 
-	              		this.points[i][j].yOffset=0;
+						//default to the pillar wall
+						this.points[i][j].img = WALL_BLOCK_IMG; 
+						//this.points[i][j].yOffset=-20;
         		}
 		}
     }
@@ -676,17 +751,19 @@ function mazeCollision() {
     cleanUp();
 }
 
-function mazeComplete() {
-    game_state = GAME_STATES.COMPLETE;
-    stopMusic();
-    playMultiSound('victory');
-    maze.complete();
-    TOTAL_SCORE += LEVEL_SCORE;
-    LEVEL_SCORE = 0;
-    CURRENT_LEVEL+=1;
-    saveGameState();
-    renderScore();
-    cleanUp();
+function mazeComplete(dest) {
+	return function () {
+ 	    game_state = GAME_STATES.COMPLETE;
+	    stopMusic();
+	    playMultiSound('victory');
+	    maze.complete();
+	    TOTAL_SCORE += LEVEL_SCORE;
+	    LEVEL_SCORE = 0;
+	    CURRENT_LEVEL = dest;
+	    saveGameState();
+	    renderScore();
+	    cleanUp();
+	}
 }
 
 function collectBonus() {
@@ -1058,9 +1135,9 @@ function playMultiSound(s) {
 /*************************************/
 
 function init_levels() {
-	LEVELS.push(new Maze("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000002000100000200000301000000000000010000000000030100000000000001000000000003010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101"));
-	LEVELS.push(new Maze("20f0e010101010101010101010101010101000000000000000000000000010102010000000000000000000001010001000101010101010101000101000100010000000000000100010100010001000101010100010001010001000100010400010001000101000100010000000001000100010100010001010101010100010001010001000000000000000001000101000100000000000000000100010100010101010101010101010001010000000000000000000000000301000000000000000000000000030101010101010101010101010101"));
-	LEVELS.push(new Maze("20f0e010101010101010101010101010101000000000002000000000000010100000000000000000000000001010001000000010000000100000101000200010002000100020000010100000000000000000000000003010401000000010000000100000301000000010000000100000000030100000002000000020000000003010001000000010000000100000101000000010000000100000000010100000000000000000000000001010000000000020000000000000101000000000000000000000000010101010101010101010101010101"));
+	LEVELS.push(new Maze("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000002000100000200000301010000000000000100000000000301010000000000000100000000000301010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101"));
+	LEVELS.push(new Maze("20f0e0101010101010101010101010101010000000000000000000000000101020100000000000000000000010100010001010101010101010001010001000100000000000001000101000100010001010101000100010100010001000104000100010001010001000100000000010001000101000100010101010101000100010100010000000000000000010001010001000000000000000001000101000101010101010101010100010100000000000000000000000003020100000000000000000000000003020101010101010101010101010101"));
+	LEVELS.push(new Maze("20f0e01010101010101010101010101010100000000000200000000000001010000000000000000000000000101000100000001000000010000010100020001000200010002000001010000000000000000000000000300010401000000010000000100000300010000000100000001000000000300010000000200000002000000000300010001000000010000000100000101000000010000000100000000010100000000000000000000000001010000000000020000000000000101000000000000000000000000010101010101010101010101010101"));
 }
 
 /*************************************/
@@ -1387,16 +1464,16 @@ function renderObject($obj, stage) {
 }
 
 /* Only used in Isometric mode */
-function getScreenX($x,$y) {
-	var x=(($x-$y)*COS)+X_ORIGIN;
-	//var x=(($x-$y)*COS);
-	return x;
-}
-
-function getScreenY($x,$y) {
-	var y=Y_ORIGIN-(($x+$y)*SIN);
-	//var y=(($x+$y)*SIN);
-	return y;
-}
+// function getScreenX($x,$y) {
+// 	var x=(($x-$y)*COS)+X_ORIGIN;
+// 	//var x=(($x-$y)*COS);
+// 	return x;
+// }
+// 
+// function getScreenY($x,$y) {
+// 	var y=Y_ORIGIN-(($x+$y)*SIN);
+// 	//var y=(($x+$y)*SIN);
+// 	return y;
+// }
 
 //Main functions held in respective pages.
