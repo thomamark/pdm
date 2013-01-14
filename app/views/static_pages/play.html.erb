@@ -24,24 +24,37 @@
             <source src="audio/victory.ogg" type="audio/ogg" />
         </audio>
         <div id="lightbox">
-          <img id="optionsbg" src="<%= asset_path('optionsbg.png') %>"/>
-        <div class="ops_panel" id="options_text">
-            <h2>Options</h2>
-            <h4>Sound</h4>
-            <input id="ctrl_fx" type="checkbox" name="soundfx" value="FX" checked="true"/> <label for="ctrl_fx">Sound effects</label> <br/>
-            <input id="ctrl_music" type="checkbox" name="music" value="music" checked="true"/> <label for="ctrl_music">Music</label>
+			<canvas class="canvas" id="map-canvas" style="z-index: 4;"></canvas>
 
-            <h4>Speed</h4>
-            <input id="speed_0" type="radio" name="speed" value="5"> <label for="speed_0">Hyperspeed</label><br>
-            <input id="speed_1" type="radio" name="speed" value="10" checked> <label for="speed_1">Mere mortal</label><br>
-            <input id="speed_2" type="radio" name="speed" value="15"> <label for="speed_2">Senior citizen</label><br>
+        	<!-- <div class="ops_panel" id="options_text"> -->
+			<div class="options" id="options-container">
+				<div id="options-list-container">
+					<ul id="options">
+						<li id="speed"><img src="<%= asset_path('options_speed.png') %>"></li>
+						<li id="soundfx"><img src="<%= asset_path('options_soundfx_on.png') %>"></li>
+						<li id="music"><img src="<%= asset_path('options_music_on.png') %>"></li>
+						<li id="home"><img src="<%= asset_path('options_home.png') %>"></li>
+						<li id="back"><img src="<%= asset_path('options_back.png') %>"></li>
+					</ul>
+				</div>
+				<!--
+	            <h2>Options</h2>
+	            <h4>Sound</h4>
+	            <input id="ctrl_fx" type="checkbox" name="soundfx" value="FX" checked="true"/> <label for="ctrl_fx">Sound effects</label> <br/>
+	            <input id="ctrl_music" type="checkbox" name="music" value="music" checked="true"/> <label for="ctrl_music">Music</label>
 
-            <div class="optionsFooter">
-              <a href="#" id="options_done">Done</a>
-              <a href="#" id="quit">Quit</a>
-            </div>
-        
-        </div>
+	            <h4>Speed</h4>
+	            <input id="speed_0" type="radio" name="speed" value="5"> <label for="speed_0">Hyperspeed</label><br>
+	            <input id="speed_1" type="radio" name="speed" value="10" checked> <label for="speed_1">Mere mortal</label><br>
+	            <input id="speed_2" type="radio" name="speed" value="15"> <label for="speed_2">Senior citizen</label><br>
+
+	            <div class="optionsFooter">
+	              <a href="#" id="options_done">Done</a>
+	              <a href="#" id="quit">Quit</a>
+	            </div>
+				-->
+				
+        	</div>
       </div>
         <div id="scorebar">
                 <span>Level:<span id="current_level">0</span></span>
@@ -51,7 +64,6 @@
         </div>
         <div class="canvas" id="game-content">
                 <canvas class="canvas" id="tile-canvas" style="z-index: 1;"></canvas>
-                <canvas class="canvas" id="maze-canvas-dragon-bg" style="z-index: 2;"></canvas>
-                <canvas class="canvas" id="maze-canvas-background" style="z-index: 4;"></canvas>
-                <canvas class="canvas" id="maze-canvas" style="z-index: 3;"></canvas>
+                <canvas class="canvas" id="maze-canvas" style="z-index: 2;"></canvas>
+                <canvas class="canvas" id="maze-canvas-background" style="z-index: 3;"></canvas>
         </div>

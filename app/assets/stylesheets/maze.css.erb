@@ -28,17 +28,6 @@ body {
   height: 500px;
 }
 
-.ops_panel{
-  position: absolute;
-  top: 80px;
-  left: 288px;
-  width: 472px;
-}
-
-.ops_panel h4 {
-  margin-bottom: 0px;
-}
-
 #scorebar {
   position: absolute;
   top: 0px;
@@ -69,6 +58,57 @@ body {
   top: 0px;
   left: 0px;
 }
+
+#options-list-container {
+width: 100%;
+height: 128px;  
+}
+
+#options-container {
+  position: absolute;
+  top: 20px;
+  left: 0px;
+  width: 900px;
+  height: 128px;
+  background: url(<%= asset_path('optionsHeaderBg.png') %>);
+  z-index: 15;
+}
+
+.options ul {
+	width: 100%;
+	height: 100%;
+	list-style: none; 
+	line-height: 128px;
+	display: inline;
+	margin: 0px;
+}
+
+.options img {
+	vertical-align: middle;
+}
+
+.options li {
+	float: left;
+	width: 64px;
+	height: 128px;
+	text-align: center;
+	line-height: 128px;
+	padding: 0px 0px 0px 64px;
+}
+
+
+/* Deprectaed
+.ops_panel{
+  position: absolute;
+  top: 80px;
+  left: 288px;
+  width: 472px;
+}
+
+.ops_panel h4 {
+  margin-bottom: 0px;
+}
+
 
 .optionsFooter{
   float: left;
@@ -108,6 +148,7 @@ input[type='radio']:checked + label {
   width: 19px;
  background: url(<%= asset_path('check_box_Y_sm.png') %>) 0 0px no-repeat;
 }
+*/
 
 .color-blue{background-position:0 0;}
 .color-orange{background-position:0 -28px;}
