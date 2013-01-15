@@ -227,7 +227,7 @@ Point.prototype.toString = function(base, pad_w){
 	var pad_w = (pad_w) ? pad_w : ENC_W;
 	switch(this.obj_type) {
 		case TYPES.GOAL:
-			if (!this.destination) {
+			if (this.destination!=0 && !this.destination) {
 				throw "Error: goal point at " + this.r + ", " + this.c + " has no destination!"
 				return undefined;
 			} else {
