@@ -289,6 +289,10 @@ function Maze (s) {
 
 Maze.prototype.reset = function() {
 	this.load(this.s);
+	//enter the maze from where you exited the last one.
+	if (pdm.state.exitr && pdm.state.exitc && pdm.state.exitdir) {
+		maze.setEntry(pdm.state.exitr, pdm.state.exitc, pdm.state.exitdir);
+	}
 }
 
 // Sets the Maze's size in rows (height) and columns (width)
@@ -298,28 +302,35 @@ Maze.prototype.setSize = function (r,c) {
 }
 
 //Sets the entry row/column for this maze
-Maze.prototype.setEntry = function(r,c) {
+Maze.prototype.setEntry = function(r,c, dir) {
+	var tr, tc;
 	switch (r) {
 		case MAX_ROWS:
 			this.er = 2;
+			tr = 1;
 			break;
 		case 1:
 			this.er = MAX_ROWS-1;
+			tr = MAX_ROWS;
 			break;
 		default:
-			this.er = r;
+			this.er = tr = r;
 			break;
 	}
 	switch (c) {
 		case MAX_COLS:
 			this.ec = 2;
+			tc = 1;
 			break;
 		case 1:
 			this.ec = MAX_COLS-1;
+			tc = MAX_COLS;
 			break;
 		default:
-			this.ec = c;
+			this.ec = tc = c;
 	}
+	//FIXME
+	return this.addPoint(new Point(getTailImg(dir), tr, tc, this.getPoint(tr,tc).isOn));
 }
 
 // Sets the Dragon's starting/drop point
@@ -1125,6 +1136,23 @@ function game_init() {
     maze_init();
 }
 
+function getTailImg(dir) {
+	switch(dir) {
+	    case "left":
+	        return TAIL_LEFT_IMG;
+	        break;
+	    case "right":
+	        return TAIL_RIGHT_IMG;
+	        break;
+	    case "up":
+	        return TAIL_UP_IMG;
+	        break;
+	    case "down":
+	        return TAIL_DOWN_IMG;
+	        break;
+	}
+}
+
 function maze_init(){
     if(game_state == GAME_STATES.COMPLETE) {
 		tileStage.clearRect(0,0,wallCanvas.width,wallCanvas.height);
@@ -1144,12 +1172,9 @@ function maze_init(){
         TOTAL_SCORE = 0;
       }
 	  	maze = new Maze(pdm.map.levels[CURRENT_LEVEL].currentMazeStr);
-		if (pdm.state.exitr && pdm.state.exitc) {
-			maze.setEntry(pdm.state.exitr, pdm.state.exitc);
-		}
 		pdm.map.levels[CURRENT_LEVEL].visited = true;
     }
-    maze.reset();
+	maze.reset();
 	if (game_state == GAME_STATES.COMPLETE || game_state == GAME_STATES.UNINIT) {
 		maze.renderTiles(tileStage);
 	}
@@ -1159,11 +1184,10 @@ function maze_init(){
     renderScore();
 	var rc = (maze.getEntry()[0]) ? maze.getEntry(): maze.getStart();
 	dragon = new Point(HEAD_DOWN_IMG, rc[0], rc[1], function () {});
-	if (pdm.state.exitdir) {setHeadImg(dragon, pdm.state.exitdir);}
+	setHeadImg(dragon, pdm.state.exitdir);
 	maze.addPoint(dragon);
-//	dragon = new StartPoint(rc[0], rc[1]);
 	maze.render(wallStage);
-    dir="start";
+    dir= (pdm.state.exitdir) ? pdm.state.exitdir : "start";
     startMusic();
 	startGameLoop();
 }
@@ -1508,39 +1532,9 @@ function stopGameLoop() {
 function update() {
     //Set the right head image depending on the direction
 	setHeadImg(dragon, dir);
-//    switch(dir) {
-//        case "left":
-//            dragon.img=HEAD_LEFT_IMG;
-//            dragon.yOffset = -15*SPRITE_SCALE;
-//            break;
-//        case "right":
-//            dragon.img=HEAD_RIGHT_IMG;
-//            dragon.yOffset = -15*SPRITE_SCALE;
-//            break;
-//        case "up":
-//            dragon.img=HEAD_UP_IMG;
-//            dragon.yOffset = -5*SPRITE_SCALE;
-//            break;
-//        case "down":
-//            dragon.img=HEAD_DOWN_IMG;
-//            dragon.yOffset = -15*SPRITE_SCALE;
-//            break;
-//        default:
-//            dragon.img=HEAD_DOWN_IMG;
-//            dragon.yOffset = -15*SPRITE_SCALE;
-//            break;
-//    }
-
-    //gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
     wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
     maze.render(wallStage);
 
-    //renderObject(dragon, wallStage);
-	//Fix rendering bug in HTML5 canvas
-	// var ptup = maze.getPoint(dragon.r-1, dragon.c);
-	// if (ptup) {
-	// 	renderObject(ptup, gameStage);
-	// }
     if (game_state == GAME_STATES.PLAYING) {
     	counter += 1;
     	if (counter>MOVE_DELAY) {
@@ -1576,29 +1570,28 @@ function update() {
 
 			maze.removePoint(oldR, oldC);
 			maze.addPoint(dragon);
-			// wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
-			// 		    maze.render(wallStage);
-	        var xy = maze.grid2canvas(oldR,oldC);
-	        // gameStage.clearRect(xy.x+dragon.xOffset,xy.y+dragon.yOffset,
-	        // 		    					xy.x+dragon.img.width*SPRITE_SCALE,
-	        // 		    					xy.y+dragon.img.height*SPRITE_SCALE);
+	        //var xy = maze.grid2canvas(oldR,oldC);
+
             switch(lastDir) {
                     case "start":
-                        switch(dir) {
-                            case "left":
-                                maze.addPoint(new Point(TAIL_LEFT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "right":
-                                maze.addPoint(new Point(TAIL_RIGHT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "up":
-                                maze.addPoint(new Point(TAIL_UP_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "down":
-                                maze.addPoint(new Point(TAIL_DOWN_IMG, oldR, oldC, mazeCollision));
-                                break;
-                        }
-                        break;
+						maze.addPoint(new Point(getTailImg(dir), 
+							oldR, oldC, mazeCollision));
+						break;
+                        //switch(dir) {
+                        //    case "left":
+                        //        maze.addPoint(new Point(TAIL_LEFT_IMG, oldR, oldC, mazeCollision));
+                        //        break;
+                        //    case "right":
+                        //        maze.addPoint(new Point(TAIL_RIGHT_IMG, oldR, oldC, mazeCollision));
+                        //        break;
+                        //    case "up":
+                        //        maze.addPoint(new Point(TAIL_UP_IMG, oldR, oldC, mazeCollision));
+                        //        break;
+                        //    case "down":
+                        //        maze.addPoint(new Point(TAIL_DOWN_IMG, oldR, oldC, mazeCollision));
+                        //        break;
+                        //}
+                        //break;
 
                     case "left":
                         switch(dir) {
