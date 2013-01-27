@@ -30,11 +30,17 @@
 			<div class="options" id="options-container">
 				<div id="options-list-container">
 					<ul id="options">
-						<li id="speed"><img src="<%= asset_path('options_speed.png') %>"></li>
-						<li id="soundfx"><img src="<%= asset_path('options_soundfx_on.png') %>"></li>
-						<li id="music"><img src="<%= asset_path('options_music_on.png') %>"></li>
+						<li id="ctrl_speed"> <img src="<%= asset_path('options_speed.png') %>"></li>
+						<li id="ctrl_fx">
+							<img id="fx-on" src="<%= asset_path('options_soundfx_on.png') %>">
+							<img id="fx-off" class="hidden"  src="<%= asset_path('options_soundfx_off.png') %>">
+						</li>
+						<li id="ctrl_music">
+							<img id="music-on" src="<%= asset_path('options_music_on.png') %>">
+							<img id="music-off" class="hidden" src="<%= asset_path('options_music_off.png') %>">
+						</li>
 						<li id="home"><img src="<%= asset_path('options_home.png') %>"></li>
-						<li id="back"><img src="<%= asset_path('options_back.png') %>"></li>
+						<li id="options_link"><img src="<%= asset_path('options_back.png') %>"></li>
 					</ul>
 				</div>
 				<!--

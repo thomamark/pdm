@@ -70,6 +70,10 @@ var COMPLETE_IMG;
 var CROWN_IMG;
 var MAP_DRAGON_IMG;
 
+//Hacky way to get images to JSON.stringify. See removeCyclicalStructures
+var IMG_PREFIX = "img";
+var IMG_CACHE = {};
+
 var POST_ASSET_load_FN; //hacky way to get images to load in lb
 
 var IMGDIR ="assets"
@@ -102,10 +106,10 @@ var ESC=27;
 var MOVE_DELAY=10;
 
 /* Game */
-pdm.map = undefined; // holds the current world.
+pdm.state.map = undefined; // holds the current world.
 var LEVELS_INITED = false;
-var CURRENT_LEVEL; //Will be set during init
-var TOTAL_SCORE; //Will be set during init
+//var pdm.state.currentLevel; //Will be set during init
+//var pdm.state.totalScore; //Will be set during init
 var LEVEL_SCORE= 0;
 var EARNED_POINTS = { "5": 40, "10": 20, "15": 40, "bonus" : 1000};
 
@@ -329,8 +333,8 @@ Maze.prototype.setEntry = function(r,c, dir) {
 		default:
 			this.ec = tc = c;
 	}
-	//FIXME
-	return this.addPoint(new Point(getTailImg(dir), tr, tc, this.getPoint(tr,tc).isOn));
+	//Make sure the tail image for the exit row is correct.
+	this.getPoint(tr,tc).img = getTailImg(dir);
 }
 
 // Sets the Dragon's starting/drop point
@@ -376,12 +380,13 @@ Maze.prototype.collectBonus = function(){
 Maze.prototype.complete = function () {
    this.doneBonuses = this.gotBonuses;
    if (this.doneBonuses==this.maxPandas) {
-		pdm.map.levels[CURRENT_LEVEL].completed = true;
+		pdm.state.map.levels[pdm.state.currentLevel].completed = true;
 	}
+	setHeadImg(maze.getPoint(dragon.r, dragon.c), dir);
 	pdm.state.exitr = dragon.r;
 	pdm.state.exitc = dragon.c;
 	pdm.state.exitdir = dir;
-	pdm.map.levels[CURRENT_LEVEL].currentMazeStr = this.toString();
+	pdm.state.map.levels[pdm.state.currentLevel].currentMazeStr = this.toString();
 }
 
 Maze.prototype.addBorders = function () {
@@ -818,6 +823,86 @@ Maze.prototype.render = function (stage) {
 	}
 }
 
+
+Maze.prototype.addDragonBody = function(dir, lastDir, oldR, oldC) {
+            switch(lastDir) {
+                    case "start":
+                        maze.addPoint(new Point(getTailImg(dir),
+                            oldR, oldC, mazeCollision));
+                        break;
+                    case "left":
+                        switch(dir) {
+                            case "left":
+                                maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "up":
+                                maze.addPoint(new Point(LEFT_TO_UP_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "down":
+                                maze.addPoint(new Point(LEFT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+                                break;
+                        }
+                        break;
+
+                    case "right":
+                        switch(dir) {
+                            case "right":
+                                maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "up":
+                                maze.addPoint(new Point(RIGHT_TO_UP_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "down":
+                                maze.addPoint(new Point(RIGHT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+                                break;
+                        }
+                        break;
+
+                    case "up":
+                        switch(dir) {
+                            case "right":
+                                maze.addPoint(new Point(UP_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "left":
+                                maze.addPoint(new Point(UP_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "up":
+                                maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
+                                break;
+                        }
+                        break;
+
+                    case "down":
+                        switch(dir) {
+                            case "right":
+                                maze.addPoint(new Point(DOWN_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "left":
+                                maze.addPoint(new Point(DOWN_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+                                break;
+                            case "down":
+                                maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+                                break;
+                        }
+                        break;
+                    default:
+                        switch(dir) {
+                            case "right":
+                                 maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+                                 break;
+                             case "left":
+                                 maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+                                 break;
+                             case "up":
+                                 maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
+                                 break;
+                             case "down":
+                                 maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+                                 break;
+                        }
+                }
+}
+
 /*************************************/
 /* Maze events                       */
 /*************************************/
@@ -841,11 +926,12 @@ function mazeComplete(dest) {
 	    stopMusic();
 	    playMultiSound('victory');
 	    maze.complete();
-	    TOTAL_SCORE += LEVEL_SCORE;
+	    pdm.state.totalScore += LEVEL_SCORE;
 	    LEVEL_SCORE = 0;
-	    CURRENT_LEVEL = dest;
+	    pdm.state.currentLevel = dest;
 	    saveGameState();
 	    renderScore();
+		renderScreen();
 	    cleanUp();
 	}
 }
@@ -857,9 +943,9 @@ function collectBonus() {
 
 function gameComplete() {
     game_state = GAME_STATES.GAME_COMPLETE;
-    CURRENT_LEVEL=0;
-    // for (var i=0; i<pdm.map.levels.length;i++) {
-    //     pdm.map.levels[i].initPoints();
+    pdm.state.currentLevel=0;
+    // for (var i=0; i<pdm.state.map.levels.length;i++) {
+    //     pdm.state.map.levels[i].initPoints();
     // }
     cleanUp();
 }
@@ -899,6 +985,12 @@ function setHeadImg(dragon, dir) {
 /* Map 						         */
 /*************************************/
 
+//Creates levels given serialized JSON object. Used in revivePdm to recreate psuedoObjects
+function MapFactory(o) {
+	return new Map(o.img, o.rows, o.cols, o.gridH, o.gridW, o.levels, o.completeImg);
+}
+
+
 /* Defines a world map.
 * All maps at present must be uniform size (900x500px). 
 * They must also reserve the top 128 px for the options toolbar.
@@ -911,20 +1003,72 @@ function Map (img, rows, cols, gridH, gridW, levels, completeImg) {
 	this.completeImg = completeImg;
 	this.gridH = gridH;
 	this.gridW = gridW;
+	this.factory="MapFactory";
 }
 
 /*************************************/
 /* Level   					         */
 /*************************************/
 
-function Level (mazeStr, specialMapImg) {
-	if (specialMapImg) {
-		this.specialImg = specialMapImg;
-	}
-	this.originalMazeStr = mazeStr;
-	this.currentMazeStr = mazeStr;
-	this.completed = false;
-	this.visited = false;
+//Creates levels given serialized JSON object. Used in revivePdm to recreate psuedoObjects
+function LevelFactory(o) {
+	return new Level(o.originalMazeStr, o.specialMapImg, o.currentMazeStr, o.completed, o.visited);	
+}
+
+
+/* 
+* A Level. Levels are part of a particular map. They hold some state
+* factory is the string name of a function which can create this object from JSON data.
+*
+*/
+function Level (originalMazeStr, specialMapImg, currentMazeStr, completed, visited) {
+	this.specialImg = (specialMapImg) ? specialMapImg : undefined;
+	this.originalMazeStr = originalMazeStr;
+	this.currentMazeStr = (currentMazeStr) ? currentMazeStr : originalMazeStr;
+	this.completed = completed;
+	this.visited = visited;
+	this.factory ="LevelFactory";
+}
+
+
+/*************************************/
+/* Utility functions                 */
+/*************************************/
+
+
+function replaceCyclicStructures(key, val) {
+	//Modified version from http://hagsdev.blogspot.com/2012/06/cyclic-objects-and-jsonstringify.html
+	if(typeof val=="object"){
+	    var ot=Object.prototype.toString.call(val);
+	    if(ot.search("object Object")>-1){
+	      return val;
+	    }else if(ot.search("HTMLImageElement")>-1){
+	      return val.pdmId;
+	    }
+		//else if(ot.search("HTMLAudioElement")>-1){
+	    //  return getAudioPath(val.src);
+	    //}else{
+	    //  //if(key!==""){
+	    //  //  console.log(ot);
+	    //  //  console.log(typeof(val)+" : "+key+" : "+val);
+	    //  //}
+	    //}
+	  }
+	  return val;
+}
+
+
+function revivePdm(key, val) {
+	var factory;
+	if (typeof val === "string" && val.substr(0,3) === "img") {
+			return IMG_CACHE[val];
+	} else if (val && typeof val === 'object') {
+        factory = val.factory;
+        if (typeof factory === 'string' && typeof window[factory] === 'function') {
+            return (window[factory])(val);
+        }
+    }
+	return val;
 }
 
 /*************************************/
@@ -941,14 +1085,43 @@ function init(fn) {
 
 }
 
-function saveGameState() {
-  $.cookie("CurrentLevel",CURRENT_LEVEL);
-  $.cookie("TotalScore",TOTAL_SCORE);
+// Returns true if you can save games
+pdm.canSave = function() {
+	return typeof Storage !==undefined;
 }
 
+// Saves game
+function saveGameState() {
+	if (pdm.canSave()) {
+		deleteSavedGame();
+		localStorage.state = JSON.stringify(pdm.state, replaceCyclicStructures);
+	} else {
+		console.log("Whoops! Web storage not available. That means we can't save your game, so you'll have to beat it in one go like a boss. Go get 'em tiger.");
+	}
+//	try {
+//		var s = JSON.stringify(pdm.state, replaceCyclicStructures);
+//		$.cookie("state", s);
+//	} catch (e) {
+//			console.log(e.message);
+//	}
+}
+
+pdm.hasSavedGame = function (){
+	return pdm.canSave() && localStorage.state !== undefined;
+	//return $.cookie("state");
+}
+
+//Initializes the game state and returns true if using saved game
 function initGameState() {
-  CURRENT_LEVEL = $.cookie("CurrentLevel") ? parseInt($.cookie("CurrentLevel")) : 0;
-  TOTAL_SCORE = $.cookie("TotalScore") ? parseInt($.cookie("TotalScore")) : 0;
+	if (pdm.hasSavedGame()) {
+			//pdm.state = JSON.parse($.cookie("state"), revivePdm);
+			pdm.state = JSON.parse(localStorage.state, revivePdm);
+			return true;
+	} else {
+		pdm.state.currentLevel = 0;
+		pdm.state.totalScore =0;
+		return false;
+	}
 }
 
 function loadAssets() {
@@ -1071,8 +1244,14 @@ function loadAssets() {
 		CROWN_IMG = createImgAsset('crown_img', "<%= asset_path('map_crown_128x128.png') %>");
 		MAP_DRAGON_IMG = createImgAsset('map_dragon_img', "<%= asset_path('map_dragon_128x128.png') %>");
 
+		IMG_CACHE[MAP_IMG.pdmId] = MAP_IMG;
+		IMG_CACHE[CROWN_IMG.pdmId] = CROWN_IMG;
+		IMG_CACHE[COMPLETE_IMG.pdmId] = COMPLETE_IMG;
+		
+
     }
 }
+
 
 
 function createImgAsset($id,$src) {
@@ -1080,6 +1259,7 @@ function createImgAsset($id,$src) {
 	loadFlags[$id]=0;
 	img.onload=function(){onAssetLoaded($id);};
 	img.src=$src;
+	img.pdmId = IMG_PREFIX + $id;
 //    img.height = GRID_H;
 //    img.width = GRID_W;
 	return img;
@@ -1098,19 +1278,43 @@ function onAssetLoaded($asset_id) {
 }
 
 function game_init() {
+    initSound();
+	initUi();
+	//Load game state if present, otherwise create initial state
+    if (!initGameState()) {
+		init_map();
+	}
+    maze_init();
+}
 
-    //Init stuff you'll need if you're playing
-    initGameState();
+function getTailImg(dir) {
+	switch(dir) {
+	    case "left":
+	        return TAIL_LEFT_IMG;
+	        break;
+	    case "right":
+	        return TAIL_RIGHT_IMG;
+	        break;
+	    case "up":
+	        return TAIL_UP_IMG;
+	        break;
+	    case "down":
+	        return TAIL_DOWN_IMG;
+	        break;
+	}
+}
+
+function initUi() {
     //Init configuration panel
     $("input[name=speed]:radio").click(function() {changeSpeed(this.value);});
     $("#ctrl_fx").click(function() {toggleFX(this.checked);});
     $("#ctrl_music").click(function() {toggleMusic(this.checked)});
     $("#options_link").click(function() {toggleOptions()});
     $("#options_done").click(function() {toggleOptions()});
-    $("#quit").click(function() {quit()});
-    initSound();
+    $("#options_done").click(function() {toggleOptions()});
+    $("#home").click(function() {window.location="/"});
 
-
+    //$("#quit").click(function() {quit()});
     //Set up graphics
 	gameCanvas = document.getElementById('maze-canvas');
 	wallCanvas = document.getElementById('maze-canvas-background');
@@ -1132,25 +1336,6 @@ function game_init() {
     $(tileCanvas).attr("width", wpx);
 	counter = 0;
 	CanvasTextFunctions.enable(gameStage);
-    init_map();
-    maze_init();
-}
-
-function getTailImg(dir) {
-	switch(dir) {
-	    case "left":
-	        return TAIL_LEFT_IMG;
-	        break;
-	    case "right":
-	        return TAIL_RIGHT_IMG;
-	        break;
-	    case "up":
-	        return TAIL_UP_IMG;
-	        break;
-	    case "down":
-	        return TAIL_DOWN_IMG;
-	        break;
-	}
 }
 
 function maze_init(){
@@ -1158,7 +1343,7 @@ function maze_init(){
 		tileStage.clearRect(0,0,wallCanvas.width,wallCanvas.height);
 		pdm.state.exitr = dragon.r;
 		pdm.state.exitc = dragon.c;
-        if (CURRENT_LEVEL>=pdm.map.levels.length){
+        if (pdm.state.currentLevel>=pdm.state.map.levels.length){
             gameComplete();
             return;
         }
@@ -1166,13 +1351,13 @@ function maze_init(){
     } 
 
     if (game_state != GAME_STATES.FAILED) {
-      if (CURRENT_LEVEL >= pdm.map.levels.length) { 
+      if (pdm.state.currentLevel >= pdm.state.map.levels.length) { 
         //Ran into messed up cookie values.
-        CURRENT_LEVEL = 0; 
-        TOTAL_SCORE = 0;
+        pdm.state.currentLevel = 0; 
+        pdm.state.totalScore = 0;
       }
-	  	maze = new Maze(pdm.map.levels[CURRENT_LEVEL].currentMazeStr);
-		pdm.map.levels[CURRENT_LEVEL].visited = true;
+	  	maze = new Maze(pdm.state.map.levels[pdm.state.currentLevel].currentMazeStr);
+		pdm.state.map.levels[pdm.state.currentLevel].visited = true;
     }
 	maze.reset();
 	if (game_state == GAME_STATES.COMPLETE || game_state == GAME_STATES.UNINIT) {
@@ -1259,15 +1444,28 @@ function stopMusic() {
 }
 
 function toggleFX(on) {
-    PLAY_FX = on;
+    //PLAY_FX = on;
+	PLAY_FX = $("#fx-on").hasClass("no-display");
+	if (PLAY_FX) {
+		$("#fx-off").addClass("no-display");
+		$("#fx-on").removeClass("no-display");
+	} else {
+		$("#fx-on").addClass("no-display");
+		$("#fx-off").removeClass("no-display");
+	}
 }
 
 function toggleMusic(on) {
-    PLAY_THEME = on;
+    //PLAY_THEME = on;
+	PLAY_THEME = $("#music-on").hasClass("no-display");
     if (PLAY_THEME) {
         startMusic();
+		$("#music-off").addClass("no-display");
+		$("#music-on").removeClass("no-display");
     } else {
         stopMusic();
+		$("#music-on").addClass("no-display");
+		$("#music-off").removeClass("no-display");
     }
 }
 
@@ -1291,10 +1489,10 @@ function toggleOptions() {
 	
 	mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
 	//draw the background image
-	mapStage.drawImage(pdm.map.img,0,0);
+	mapStage.drawImage(pdm.state.map.img,0,0);
 	mapStage.globalAlpha = 0.5;
 	mapStage.fillStyle = "#000000";
-	mapStage.fillRect(0, 0, mapStage.canvas.width, pdm.map.gridH);
+	mapStage.fillRect(0, 0, mapStage.canvas.width, pdm.state.map.gridH);
 	mapStage.globalAlpha = 1;
 	
 	
@@ -1314,31 +1512,33 @@ function toggleOptions() {
 	// }
 	// renderOptions(mapStage);
 		
-	for(var level = 0, numlvls = pdm.map.levels.length; level < numlvls; level +=1) {
-		var x = pdm.map.gridW*(level%pdm.map.cols);
-		var y = pdm.map.gridH*Math.floor(level/pdm.map.cols) + OPTIONS_BAR_HEIGHT;
-		if (level==CURRENT_LEVEL) {
+	for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
+		var x = pdm.state.map.gridW*(level%pdm.state.map.cols);
+		var y = pdm.state.map.gridH*Math.floor(level/pdm.state.map.cols) + OPTIONS_BAR_HEIGHT;
+		if (level==pdm.state.currentLevel) {
 			mapStage.drawImage(MAP_DRAGON_IMG, x,y);
-		} else if (!pdm.map.levels[level].visited) {
+		} else if (!pdm.state.map.levels[level].visited) {
 			mapStage.globalAlpha = 0.5;
 			mapStage.fillStyle = "#000000";
-			mapStage.fillRect(x, y, pdm.map.gridW, pdm.map.gridH);
+			mapStage.fillRect(x, y, pdm.state.map.gridW, pdm.state.map.gridH);
 			mapStage.globalAlpha = 1;
-		} else if (pdm.map.levels[level].specialImg) {
-			mapStage.drawImage(pdm.map.specialImg, x, y);
-		} else if (pdm.map.levels[level].completed) {
-			mapStage.drawImage(pdm.map.completeImg, x, y);
+		} else if (pdm.state.map.levels[level].specialImg) {
+			mapStage.drawImage(pdm.state.map.specialImg, x, y);
+		} else if (pdm.state.map.levels[level].completed) {
+			mapStage.drawImage(pdm.state.map.completeImg, x, y);
 		}
 	}
 }
 
-function deleteCookie() {
-  $.removeCookie("CurrentLevel");
-  $.removeCookie("TotalScore");
+function deleteSavedGame() {
+	localStorage.clear();
+  //$.removeCookie("state");
+//  $.removeCookie("CurrentLevel");
+//  $.removeCookie("TotalScore");
 }
 
 function quit() {
-  deleteCookie();
+  deleteSavedGame();
   window.location = "/";
 }
 
@@ -1365,14 +1565,14 @@ function playMultiSound(s) {
 /*************************************/
 
 function init_map() {
-	pdm.map = new Map(MAP_IMG, 3, 7, 128, 128, init_levels(), COMPLETE_IMG);
+	pdm.state.map = new Map(MAP_IMG, 3, 7, 128, 128, init_levels(), COMPLETE_IMG);
 }
 
 function init_levels() {
 	lvls = [];
 	lvls.push(new Level("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000010000000000000101000000000001000000000000010100000000000100000000000003010100000002000100020000000003010100000000000100000000000003010100000000000100000000000001010000000000010000000000000101000000000001000000000000010100000000000100000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101"));
 	lvls.push(new Level("20f0e0101010101010101010101010101010400000000000000000000000101000000000000000000000000010100000101010000010101000001010000000000000000000000000103000001000000000000000001000302030000010000000200000000010003020300000100000000000000000100030201000000000000000000000000010100000000000000000000000001010000010101000001010100000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101010101010103080308010101010101"));
-	lvls.push(new Level("20f0e010101010101010101010101010101000000000000000000000000010100000000000000000000000001010001000002000001000000000101000000010001000000010000010301000000000000020000000200010301000100000004000100000000010301000000010001000000010000010100000000020000000000000001010001000000000001000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101"), CROWN_IMG);
+	lvls.push(new Level("20f0e010101010101010101010101010101000000000000000000000000010100000000000000000000000001010001000002000001000000000101000000010001000000010000010301000000000000020000000200010301000100000004000100000000010301000000010001000000010000010100000000020000000000000001010001000000000001000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101"));
 
 	/* repeated below */
 	lvls.push(new Level("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000002000100000200000301010000000000000100000000000301010000000000000100000000000301010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101"));
@@ -1529,11 +1729,15 @@ function stopGameLoop() {
     window.clearTimeout(request);
 }
 
+function renderScreen() {
+    wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
+    maze.render(wallStage);
+}
+
 function update() {
     //Set the right head image depending on the direction
 	setHeadImg(dragon, dir);
-    wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
-    maze.render(wallStage);
+	renderScreen();
 
     if (game_state == GAME_STATES.PLAYING) {
     	counter += 1;
@@ -1559,112 +1763,98 @@ function update() {
     			dragon.r = dragon.r + 1;
     			counter =0;
     		}	
-    	
-    		maze.isOn(dragon.r, dragon.c)
-		    if (game_state != GAME_STATES.PLAYING) { return; }
-    
-              if (dir!="start") {
-                LEVEL_SCORE += EARNED_POINTS[MOVE_DELAY];
-                renderScore();
-    		  }
 
 			maze.removePoint(oldR, oldC);
+			maze.addDragonBody(dir, lastDir, oldR, oldC);
+
+    		maze.isOn(dragon.r, dragon.c);
+		    if (game_state != GAME_STATES.PLAYING) { return; }
+            if (dir!="start") {
+                LEVEL_SCORE += EARNED_POINTS[MOVE_DELAY];
+                renderScore();
+    		}
 			maze.addPoint(dragon);
-	        //var xy = maze.grid2canvas(oldR,oldC);
 
-            switch(lastDir) {
-                    case "start":
-						maze.addPoint(new Point(getTailImg(dir), 
-							oldR, oldC, mazeCollision));
-						break;
-                        //switch(dir) {
-                        //    case "left":
-                        //        maze.addPoint(new Point(TAIL_LEFT_IMG, oldR, oldC, mazeCollision));
-                        //        break;
-                        //    case "right":
-                        //        maze.addPoint(new Point(TAIL_RIGHT_IMG, oldR, oldC, mazeCollision));
-                        //        break;
-                        //    case "up":
-                        //        maze.addPoint(new Point(TAIL_UP_IMG, oldR, oldC, mazeCollision));
-                        //        break;
-                        //    case "down":
-                        //        maze.addPoint(new Point(TAIL_DOWN_IMG, oldR, oldC, mazeCollision));
-                        //        break;
-                        //}
-                        //break;
 
-                    case "left":
-                        switch(dir) {
-                            case "left":
-                                maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "up":
-                                maze.addPoint(new Point(LEFT_TO_UP_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "down":
-                                maze.addPoint(new Point(LEFT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-                                break;
-                        }
-                        break;
 
-                    case "right":
-                        switch(dir) {
-                            case "right":
-                                maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "up":
-                                maze.addPoint(new Point(RIGHT_TO_UP_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "down":
-                                maze.addPoint(new Point(RIGHT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-                                break;
-                        }
-                        break;
-
-                    case "up":
-                        switch(dir) {
-                            case "right":
-                                maze.addPoint(new Point(UP_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "left":
-                                maze.addPoint(new Point(UP_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "up":
-                                maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
-                                break;
-                        }
-                        break;
-                     
-                    case "down":
-                        switch(dir) {
-                            case "right":
-                                maze.addPoint(new Point(DOWN_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "left":
-                                maze.addPoint(new Point(DOWN_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-                                break;
-                            case "down":
-                                maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-                                break;
-                        }
-                        break;
-                    default:
-						switch(dir) {
-                         	case "right":
-	                             maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-	                             break;
-	                         case "left":
-	                             maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-	                             break;
-	                         case "up":
-	                             maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
-	                             break;
-	                         case "down":
-	                             maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-	                             break;                        
-						}
-                }                
-			lastDir = dir;
+			//lastDir = dir;
+//            switch(lastDir) {
+//                    case "start":
+//						maze.addPoint(new Point(getTailImg(dir), 
+//							oldR, oldC, mazeCollision));
+//						break;
+//                    case "left":
+//                        switch(dir) {
+//                            case "left":
+//                                maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "up":
+//                                maze.addPoint(new Point(LEFT_TO_UP_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "down":
+//                                maze.addPoint(new Point(LEFT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                        }
+//                        break;
+//
+//                    case "right":
+//                        switch(dir) {
+//                            case "right":
+//                                maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "up":
+//                                maze.addPoint(new Point(RIGHT_TO_UP_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "down":
+//                                maze.addPoint(new Point(RIGHT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                        }
+//                        break;
+//
+//                    case "up":
+//                        switch(dir) {
+//                            case "right":
+//                                maze.addPoint(new Point(UP_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "left":
+//                                maze.addPoint(new Point(UP_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "up":
+//                                maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                        }
+//                        break;
+//                     
+//                    case "down":
+//                        switch(dir) {
+//                            case "right":
+//                                maze.addPoint(new Point(DOWN_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "left":
+//                                maze.addPoint(new Point(DOWN_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                            case "down":
+//                                maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+//                                break;
+//                        }
+//                        break;
+//                    default:
+//						switch(dir) {
+//                         	case "right":
+//	                             maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
+//	                             break;
+//	                         case "left":
+//	                             maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
+//	                             break;
+//	                         case "up":
+//	                             maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
+//	                             break;
+//	                         case "down":
+//	                             maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
+//	                             break;                        
+//						}
+//                }                
+//			lastDir = dir;
           }
         }
 	}
@@ -1693,12 +1883,20 @@ function stagePrint(text, x, y, stage) {
 }
 
 
+//renders the screen
+function renderScreen() {
+    wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
+    maze.render(wallStage);
+}
+
+
 // prints the new score
 function renderScore() {
-        $('#total_score').text(TOTAL_SCORE);
+        $('#total_score').text(pdm.state.totalScore);
         $('#level_score').text(LEVEL_SCORE);
-        $('#current_level').text(CURRENT_LEVEL+1);
+        $('#current_level').text(pdm.state.currentLevel+1);
 }
+
 
 /*
 * Default rendering engine

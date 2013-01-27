@@ -26,19 +26,54 @@
   }
 
   #intro {
-    background-image: url(<%= asset_path 'title.png' %>);
+    background-image: url(<%= asset_path 'title_clean.png' %>);
     width: 900px;
     height: 500px;
   }
+
+	.menu-items {
+		position:relative;
+		top: 250px;
+		width: 100%;
+		padding: 0px;
+		margin: auto;
+		list-style: none;
+		text-align: center;
+		vertical-align: center;
+	}
+
+	#story {
+		position: absolute;
+		top: 250px;
+		margin: auto;
+		}
+
+	.menu-items li {
+		background-image: url(<%= asset_path('button_empty.png') %>);
+		background-repeat: no-repeat;
+		height: 78px;
+		width: 288px;
+		line-height: 70px;
+		margin: auto;
+		padding-bottom: 5px;
+		padding-top: 5px;
+		color: #961315;
+	}
+
+	.menu-items li:hover {
+		background-image: url(<%= asset_path('button_empty_hover.png') %>);
+		height: 78px;
+		padding-bottom: 5px;
+		padding-top: 5px;
+		background-repeat: no-repeat;
+	}
 
 </style>
 
 
 <script type="text/javascript">
-  if ( $.cookie("CurrentLevel") && $.cookie("CurrentLevel") > 0) {
-     window.location = "play";
-  }
   var ENTER_KEY = 13;
+/*
   function onKeyDown($evt) {
     $evt.preventDefault();
     if ($evt.keyCode==ENTER_KEY) {
@@ -50,11 +85,26 @@
        $('#enterText').toggle(); 
        window.setTimeout(blinker, 50000/60);
   }
+*/
 
   $('document').ready( function() {
-      window.onkeydown = onKeyDown;
-      window.setTimeout(blinker, 50000 / 60);
-  });
+      //window.onkeydown = onKeyDown;
+      //window.setTimeout(blinker, 50000 / 60);
+  	if ( pdm.hasSavedGame()){
+		//We found a saved game
+		$("#story").addClass("no-display");
+		$("#continue").click(function () { window.location = "play";}).removeClass("hidden");
+  	}
+
+	$("#new").click(function() { 
+		if (!pdm.canSave()) {
+			alert("Whoops! Web storage not available. That means we can't save your game, so you'll have to beat it in one go like a boss. Go get 'em tiger.");
+		} else if (pdm.hasSavedGame()) {
+			deleteSavedGame();	
+		}
+		window.location="/play";
+		});
+	});
 
 </script>
 
@@ -69,6 +119,10 @@
    
 </audio>
 <div id="intro">
-  <!-- <p id="story" >The pandas are being burgled! Twist through the burgler&#146;s mazes and save them before it&#146;s too late!</p> -->
-  <h2 id="enterText">Press Enter</h2>
+  <p id="story" >The pandas are being burgled! Twist through the burgler&#146;s mazes and save them before it&#146;s too late!</p>
+	<ul class="menu-items">
+		<li id="continue" class="hidden">Continue</li>
+		<li id="new">New game</li>
+	</ul>
+  <!-- <h2 id="enterText">Press Enter</h2> -->
 </div>
