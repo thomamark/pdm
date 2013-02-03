@@ -50,6 +50,13 @@
 			.invalid {
 				background-color: #FA6B8D;
 			}
+			
+			.ctrlText p, span, a {
+				font-size: x-small;
+				color: #666;
+			}
+
+			
 
 		</style>
 
@@ -61,7 +68,6 @@
 		var selectedId;
 		var selectedImg;
 		var selectedObj;
-		var startPos;
      	var IMGS;
 		var OBJS;
 		var oldR =-1;
@@ -90,7 +96,7 @@
 			return typeof d === 'number' && !isNaN(d) && d % 1 == 0 && d >= 0;
 		}
 		
-		function renderGoal() {
+		function renderGoalTool() {
 			$('#'+TYPES.GOAL).append("<div style='display: inline; position: relative; clear: both;'>" +
 				"<span style='font-size: 10px'>Dest: </span><input type='text' id='dest_text' size='4' value='" + GOAL_DEST + "'/>");
 			$('#dest_text').blur(function () {
@@ -112,6 +118,7 @@
 			});
 		}
 
+
 		function findPos(obj) {
 			    var curleft = 0, curtop = 0;
 			    if (obj.offsetParent) {
@@ -123,16 +130,47 @@
 			    }
 			    return undefined;
 		}
+
+		//Load the maze with the given string or default to just borders
+		function initLbMaze(s) {
+			maze = new Maze(s);
+			var startPos = maze.getStart();
+			//Add a dummy point to render the start position
+			if (startPos) {
+					 maze.addPoint(new Point(HEAD_DOWN_IMG, startPos.r, startPos.c, undefined, undefined, DEFAULT_STARTPT_YOFFSET))
+			}
+			//var rc = maze.getStart();
+			//startPos = {"r": rc[0], "c": rc[1]};
+		}
+
+		function refreshMaze() {
+			maze.fixWallImages();
+			bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+	    	maze.render(bgStage);
+			updateMazeStr();
+		}
+
+		function updateMazeStr() {
+			try {
+					if (!maze.getStart()) {
+							$('#curMazeStr').text("Please add a start point!");
+					} else {
+							$('#curMazeStr').text(maze.toString());
+					}
+			} catch (e) {
+				console.log("Error updating maze string in levelbuilder. "+e.message);
+			}
+		}
+
 		$(document).ready( function () {
 			// Turn on verbose output
 			DEBUG = true;
-			POINTS[TYPES.GOAL] = function (r, c) { return new GoalPoint(r, c, GOAL_DEST);};
+			POINTS[TYPES.GOAL] = function (r, c, dest) { return new GoalPoint(r, c, (dest) ? dest : GOAL_DEST);};
 
 			/* holds functions which are called when an object is selected */
 			RENDERFN = {};
-			RENDERFN[TYPES.GOAL] = renderGoal;
+			RENDERFN[TYPES.GOAL] = renderGoalTool;
 
-			maze = new Maze("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000002000100000200000301010000000000000100000000000301010000000000000100000000000301010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101");
 
 			//Find current max enum value and use that for delete
 			var max = -1;
@@ -195,8 +233,9 @@
 					//Don't delete borders unless this is a goal
 					if (!(curR <= 1 || curR >= maze.rows || curC <= 1 ||curC >= maze.cols)) {
 							maze.removePoint(curR, curC);
+							var startPos = maze.getStart();
 							if (startPos && curR == startPos.r && curC == startPos.c) {
-								startPos = undefined;
+								maze.unsetStart();
 							}
 					} else if (maze.isType(curR-1, curC-1, TYPES.GOAL)) {
 							maze.removePoint(curR, curC);
@@ -210,12 +249,18 @@
 					maze.addPoint(new selectedObj(curR, curC)); 
 				} else if (!maze.hasPoint(curR,curC)) {
 					if (selectedId == TYPES.START) {
+						//Make sure there is only ever one start position
+						var startPos = maze.getStart();
 						if (startPos) {
-								maze.removePoint(startPos.r, startPos.c);
-								startPos.r = curR;
-								startPos.c = curC;
+								try {
+										maze.unsetStart();
+										maze.removePoint(startPos.r, startPos.c);
+								} catch (e) {
+									console.log("No point to remove at "+startPos.r+" "+startPos.c+".");
+								}
+								maze.setStart(curR, curC);
 						} else {
-							startPos = {"r" : curR, "c" : curC};
+							maze.setStart(curR,curC);
 						}
 						//The StartPoint object won't actually be added to the maze, so add a placeholder
 						//Note that the toString function will ignore points without types, so this is fine.
@@ -224,9 +269,8 @@
 					//The majority case: just add the point to the maze
 					maze.addPoint(new selectedObj(curR, curC));
 				}
-				maze.fixWallImages();
-				bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
-	       		maze.render(bgStage);
+
+				refreshMaze();
 			});
 
 		  $('#maze-canvas').mousemove(function(e) {
@@ -251,6 +295,18 @@
 //			    var coordinateDisplay = "x=" + x + ", y=" + y;
 //			    writeCoordinateDisplay(coordinateDisplay);
 			});
+
+			$('#load').click(function (e) {
+					e.preventDefault();
+					var s = $('#loadStr').val();
+					try {
+						initLbMaze(s);
+						refreshMaze();
+					} catch(e) {
+						alert("Could not load maze! "+ e);
+					}
+				}
+			);
 			  
 	        init(function () {
 	          //wait until images are actually loaded
@@ -260,9 +316,11 @@
 	            IMGS[TYPES.GOAL] = PORTAL_IMG;
 	            IMGS[TYPES.START] = HEAD_DOWN_IMG;
 	            IMGS[TYPES.DELETE] = DELETE_IMG;
-				maze.setSize(MAX_ROWS, MAX_COLS);
-				maze.initPoints();
-				maze.addBorders();
+				initLbMaze("20f0e010101010101010101010101010101040000000000000000000000010100000000000000000000000001010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000002000100000200000301010000000000000100000000000301010000000000000100000000000301010000000000000100000000000101000000000000010000000000010100000000000001000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101");
+				updateMazeStr();
+			//	maze.setSize(MAX_ROWS, MAX_COLS);
+			//	//maze.initPoints();
+			//	maze.addBorders();
 			    maze.render(bgStage);
 				$('li').each( function (i, el) {
 					$(el).click(select);
@@ -279,7 +337,6 @@
 				n2h features:
 					auto-add borders
 					changing tile size
-					adding multiple goals with multiple results
 				
 				-->
  <% end %>
@@ -295,6 +352,8 @@
 				<li id="delete"></li>
 				-->
 			</ul>
+			<p class="ctrlText"><span>Maze string</span><br><span id="curMazeStr">&nbsp;</span></p>
+			<p class="ctlrText"><input id="loadStr" type="text" name="loadStr" size="50"> <a href="#" id="load">load</a></p>
 		</div>
 		<!--
 		<span >X = <span id="cx">&nbsp;</span> </span>
