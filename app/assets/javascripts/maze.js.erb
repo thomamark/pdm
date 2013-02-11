@@ -73,6 +73,10 @@ var CROWN_IMG;
 var MAP_DRAGON_IMG;
 var MAP_ICON;
 var PAUSE_ICON;
+var MAP_HEADER_BG;
+var BACK_IMG;
+
+var MAP_VISIBLE = false;
 
 //Hacky way to get images to JSON.stringify. See removeCyclicalStructures
 var IMG_PREFIX = "img";
@@ -1275,6 +1279,9 @@ function loadAssets() {
 		MAP_ICON = createImgAsset('map_icon_img', "<%= asset_path('mapIcon.png') %>");
 		PAUSE_ICON = createImgAsset('pause_icon_img', "<%= asset_path('pauseIcon.png') %>");
 
+		MAP_HEADER_BG = createImgAsset('map_header_bg', "<%= asset_path('optionsHeaderBg.png') %>");
+		BACK_IMG = createImgAsset('back_img', "<%= asset_path('backIcon.png') %>");
+
 		IMG_CACHE[MAP_IMG.pdmId] = MAP_IMG;
 		IMG_CACHE[CROWN_IMG.pdmId] = CROWN_IMG;
 		IMG_CACHE[COMPLETE_IMG.pdmId] = COMPLETE_IMG;
@@ -1371,7 +1378,8 @@ function initUi() {
 	counter = 0;
 	CanvasTextFunctions.enable(gameStage);
 
-    $("#maze-canvas-background").click(function (e) {
+    $("#maze-canvas-background").click(function (e, evt) {
+		var e = (evt) ? evt : e; 
         //See if you clicked an option and, if so, call the option fn.
         var pos = findPos(this);
         var x = e.pageX - pos.x - maze.xOffset;
@@ -1384,6 +1392,21 @@ function initUi() {
             toggleOptions();
         }
     });
+
+  $("#map-canvas").click(function (e) {
+	  if (!MAP_VISIBLE) { 
+			// ignore clicks if not visible.
+			$("#maze-canvas-background").trigger("click",[e]);
+			return; 
+		} 
+      //See if you clicked an option and, if so, call the option fn.
+      var pos = findPos(this);
+      var x = e.pageX - pos.x - maze.xOffset;
+      var y = e.pageY - pos.y - maze.yOffset;
+      if ((x>= 782) && (y >= 42) && x <= (782 + BACK_IMG.width) && y <= (42 + BACK_IMG.height)) {
+          toggleOptions();
+      }
+  });
 }
 
 function maze_init(){
@@ -1532,66 +1555,59 @@ function toggleAlert(msg) {
 }
 
 function toggleOptions() {
+  mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
   if (game_state == GAME_STATES.PAUSED) {
+		MAP_VISIBLE = false;
 		unpause();
+		return;
 	} else {
+		MAP_VISIBLE = true;
 		pause();
-	}
-	$("#lightbox").toggle();
-
-//	$("#maze-canvas-background").click(function (e) {
-//		//See if you clicked an option and, if so, call the option fn.
-//		var pos = findPos(this);
-//	    var x = e.pageX - pos.x - maze.xOffset;
-//	    var y = e.pageY - pos.y - maze.yOffset;
-//		var c = Math.ceil(x/map.gridW);
-//		var r = Math.ceil(y/map.gridH);
-//		if (r==1 && c==PAUSE_ICON_POS) {
-//			pause();
-//		}  else if (r==1 && c==MAP_ICON_POS) {
-//			toggleOptions();
-//		}
-//	});
 	
-	mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
-	//draw the background image
-	mapStage.drawImage(pdm.state.map.img,0,0);
-	mapStage.globalAlpha = 0.5;
-	mapStage.fillStyle = "#000000";
-	mapStage.fillRect(0, 0, mapStage.canvas.width, pdm.state.map.gridH);
-	mapStage.globalAlpha = 1;
-	
-	
-	// var renderOptions = function (stage, map) {
-	// 	//Draw the options background
-	// 	stage.globalAlpha = 0.5;
-	// 	stage.fillStyle = "#000000";
-	// 	stage.fillRect(0,0,mapStage.width, map.gridH);
-	// 	stage.drawImage(map.optionsBgImg, 0,0);
-	// 		
-	// 	//draw the options row
-	// 	for (var o in OPTIONS) {
-	// 		stage.drawImage(OPTIONS[o].getImg(), map.xoff+o*OPTION_GRID_W, map.yoff);
-	// 		OPTIONS[o].setPos(map.xoff+o*OPTION_GRID_W, map.yoff);
-	// 	}
-	// 	
-	// }
-	// renderOptions(mapStage);
+		//$("#lightbox").toggle();
 		
-	for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
-		var x = pdm.state.map.gridW*(level%pdm.state.map.cols);
-		var y = pdm.state.map.gridH*Math.floor(level/pdm.state.map.cols) + OPTIONS_BAR_HEIGHT;
-		if (level==pdm.state.currentLevel) {
-			mapStage.drawImage(MAP_DRAGON_IMG, x,y);
-		} else if (!pdm.state.map.levels[level].visited) {
-			mapStage.globalAlpha = 0.5;
-			mapStage.fillStyle = "#000000";
-			mapStage.fillRect(x, y, pdm.state.map.gridW, pdm.state.map.gridH);
-			mapStage.globalAlpha = 1;
-		} else if (pdm.state.map.levels[level].specialImg) {
-			mapStage.drawImage(pdm.state.map.specialImg, x, y);
-		} else if (pdm.state.map.levels[level].completed) {
-			mapStage.drawImage(pdm.state.map.completeImg, x, y);
+		//draw the background image
+		mapStage.drawImage(pdm.state.map.img,0,0);
+		mapStage.globalAlpha = 0.5;
+		mapStage.fillStyle = "#000000";
+		mapStage.fillRect(0, 0, mapStage.canvas.width, pdm.state.map.gridH);
+		mapStage.globalAlpha = 1;
+	
+		mapStage.drawImage(MAP_HEADER_BG,0,0);
+		mapStage.drawImage(BACK_IMG, 782, 42);
+		
+		
+		// var renderOptions = function (stage, map) {
+		// 	//Draw the options background
+		// 	stage.globalAlpha = 0.5;
+		// 	stage.fillStyle = "#000000";
+		// 	stage.fillRect(0,0,mapStage.width, map.gridH);
+		// 	stage.drawImage(map.optionsBgImg, 0,0);
+		// 		
+		// 	//draw the options row
+		// 	for (var o in OPTIONS) {
+		// 		stage.drawImage(OPTIONS[o].getImg(), map.xoff+o*OPTION_GRID_W, map.yoff);
+		// 		OPTIONS[o].setPos(map.xoff+o*OPTION_GRID_W, map.yoff);
+		// 	}
+		// 	
+		// }
+		// renderOptions(mapStage);
+			
+		for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
+			var x = pdm.state.map.gridW*(level%pdm.state.map.cols);
+			var y = pdm.state.map.gridH*Math.floor(level/pdm.state.map.cols) + OPTIONS_BAR_HEIGHT;
+			if (level==pdm.state.currentLevel) {
+				mapStage.drawImage(MAP_DRAGON_IMG, x,y);
+			} else if (!pdm.state.map.levels[level].visited) {
+				mapStage.globalAlpha = 0.5;
+				mapStage.fillStyle = "#000000";
+				mapStage.fillRect(x, y, pdm.state.map.gridW, pdm.state.map.gridH);
+				mapStage.globalAlpha = 1;
+			} else if (pdm.state.map.levels[level].specialImg) {
+				mapStage.drawImage(pdm.state.map.specialImg, x, y);
+			} else if (pdm.state.map.levels[level].completed) {
+				mapStage.drawImage(pdm.state.map.completeImg, x, y);
+			}
 		}
 	}
 }
