@@ -287,7 +287,7 @@
 						//bgStage.clearRect(0,0,bgCanvas.width,bgCanvas.height);
               			//maze.render();
 						gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
-						renderObject(new selectedObj(curR, curC), gameStage);
+						renderMazeObject(new selectedObj(curR, curC), gameStage);
 						oldR = curR;
 						oldC = curC;
 						if (MOUSE_DOWN) {$('#maze-canvas').trigger('mazeClick');}

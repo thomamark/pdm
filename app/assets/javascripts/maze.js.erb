@@ -18,6 +18,8 @@ var OPTIONS_BAR_HEIGHT = 128;
 var WALL_PAD=10*SPRITE_SCALE;
 var MAX_COLS = Math.floor(900/GRID_W);
 var MAX_ROWS = Math.floor(500/GRID_H);
+var MAP_ICON_POS = MAX_COLS-2;
+var PAUSE_ICON_POS = MAX_COLS;
 var DEFAULT_WALL_YOFFSET = -10*SPRITE_SCALE;	//Need to get rid of this hack eventually
 var DEFAULT_STARTPT_YOFFSET = -13*SPRITE_SCALE;
 var DEFAULT_GOAL_YOFFSET = -GRID_H;
@@ -69,6 +71,8 @@ var MAP_IMG;
 var COMPLETE_IMG;
 var CROWN_IMG;
 var MAP_DRAGON_IMG;
+var MAP_ICON;
+var PAUSE_ICON;
 
 //Hacky way to get images to JSON.stringify. See removeCyclicalStructures
 var IMG_PREFIX = "img";
@@ -382,7 +386,8 @@ Maze.prototype.getStart = function () {
 
 Maze.prototype.collectBonus = function(){
     this.gotBonuses +=1;
-    LEVEL_SCORE += EARNED_POINTS['bonus'];
+	LEVEL_SCORE += 1;
+    //LEVEL_SCORE += EARNED_POINTS['bonus'];
 }
 
 Maze.prototype.complete = function () {
@@ -815,7 +820,7 @@ Maze.prototype.isOn = function (r, c) {
 Maze.prototype.renderTiles = function (stage) {
 	for (var i =0; i<this.rows; i++) {
 		for (var j =0; j<this.cols; j++) {
-            renderObject(new TilePoint(i+1, j+1), stage);
+            renderMazeObject(new TilePoint(i+1, j+1), stage);
 		}
 	}
 }
@@ -825,10 +830,10 @@ Maze.prototype.render = function (stage) {
 		for (var j =0; j<this.cols; j++) {
             //render the background tiles the first time we render the maze.
             // if (game_state != GAME_STATES.FAILED) {
-            //      renderObject(new TilePoint(i+1, j+1),tileStage);
+            //      renderMazeObject(new TilePoint(i+1, j+1),tileStage);
             //  }
  			if (this.points[i][j]) {
-				renderObject(this.points[i][j], stage);
+				renderMazeObject(this.points[i][j], stage);
 			}
 		}
 	}
@@ -941,7 +946,6 @@ function mazeComplete(dest) {
 	    LEVEL_SCORE = 0;
 	    pdm.state.currentLevel = dest;
 	    saveGameState();
-	    renderScore();
 		renderScreen();
 	    cleanUp();
 	}
@@ -1080,6 +1084,19 @@ function revivePdm(key, val) {
         }
     }
 	return val;
+}
+
+
+function findPos(obj) {
+    var curleft = 0, curtop = 0;
+    if (obj.offsetParent) {
+        do {
+            curleft += obj.offsetLeft;
+            curtop += obj.offsetTop;
+        } while (obj = obj.offsetParent);
+        return { x: curleft, y: curtop };
+    }
+    return undefined;
 }
 
 /*************************************/
@@ -1255,6 +1272,8 @@ function loadAssets() {
 		COMPLETE_IMG = createImgAsset('complete_img', "<%= asset_path('map_complete_128x128.png') %>");
 		CROWN_IMG = createImgAsset('crown_img', "<%= asset_path('map_crown_128x128.png') %>");
 		MAP_DRAGON_IMG = createImgAsset('map_dragon_img', "<%= asset_path('map_dragon_128x128.png') %>");
+		MAP_ICON = createImgAsset('map_icon_img', "<%= asset_path('mapIcon.png') %>");
+		PAUSE_ICON = createImgAsset('pause_icon_img', "<%= asset_path('pauseIcon.png') %>");
 
 		IMG_CACHE[MAP_IMG.pdmId] = MAP_IMG;
 		IMG_CACHE[CROWN_IMG.pdmId] = CROWN_IMG;
@@ -1322,7 +1341,7 @@ function initUi() {
     $("#ctrl_fx").click(function() {toggleFX(this.checked);});
     $("#ctrl_music").click(function() {toggleMusic(this.checked)});
     $("#options_link").click(toggleOptions);
-    $("#mapItem").click(toggleOptions);
+    //$("#mapItem").click(toggleOptions);
     //$("#options_done").click(toggleOptions);
     $("#home").click(function() {window.location="/"});
     $("#alert-close").click(function () {toggleAlert(false);});
@@ -1333,10 +1352,12 @@ function initUi() {
 	wallCanvas = document.getElementById('maze-canvas-background');
 	mapCanvas = document.getElementById('map-canvas');
     tileCanvas = document.getElementById('tile-canvas');
+    //scoreCanvas = document.getElementById('score-canvas');
 	gameStage = gameCanvas.getContext("2d");
 	wallStage = wallCanvas.getContext("2d");
 	mapStage = mapCanvas.getContext("2d");
 	tileStage = tileCanvas.getContext("2d");
+	//scoreStage = scoreCanvas.getContext("2d");
 	var hpx = MAX_ROWS*GRID_H+WALL_PAD;
     var wpx = MAX_COLS*GRID_W;
     $(gameCanvas).attr("height", hpx);
@@ -1349,6 +1370,20 @@ function initUi() {
     $(tileCanvas).attr("width", wpx);
 	counter = 0;
 	CanvasTextFunctions.enable(gameStage);
+
+    $("#maze-canvas-background").click(function (e) {
+        //See if you clicked an option and, if so, call the option fn.
+        var pos = findPos(this);
+        var x = e.pageX - pos.x - maze.xOffset;
+        var y = e.pageY - pos.y - maze.yOffset;
+        var c = Math.ceil(x/GRID_W);
+        var r = Math.ceil(y/GRID_H);
+        if (r==1 && c==PAUSE_ICON_POS) {
+            //pause();
+        }  else if (r==1 && c==MAP_ICON_POS) {
+            toggleOptions();
+        }
+    });
 }
 
 function maze_init(){
@@ -1379,12 +1414,13 @@ function maze_init(){
 
 	game_state = GAME_STATES.READY;
     printState();
-    renderScore();
+    //renderScore(wallStage);
 	var rc = (maze.getEntry()) ? maze.getEntry(): maze.getStart();
 	dragon = new Point(HEAD_DOWN_IMG, rc.r, rc.c, function () {});
 	setHeadImg(dragon, pdm.state.exitdir);
 	maze.addPoint(dragon);
 	maze.render(wallStage);
+	renderControls(wallStage);
     dir= (pdm.state.exitdir) ? pdm.state.exitdir : "start";
     startMusic();
 	startGameLoop();
@@ -1502,16 +1538,20 @@ function toggleOptions() {
 		pause();
 	}
 	$("#lightbox").toggle();
-	// $("#map-canvas").click(function (e) {
-	// 	//See if you clicked an option and, if so, call the option fn.
-	// 	var pos = findPos(this);
-	//     var x = e.pageX - pos.x - maze.xOffset;
-	//     var y = e.pageY - pos.y - maze.yOffset;
-	// 	if ()
-	// 	curC = Math.ceil(x/map.gridW);
-	// 	curR = Math.ceil(y/map.gridH);
-	// 		
-	// });
+
+//	$("#maze-canvas-background").click(function (e) {
+//		//See if you clicked an option and, if so, call the option fn.
+//		var pos = findPos(this);
+//	    var x = e.pageX - pos.x - maze.xOffset;
+//	    var y = e.pageY - pos.y - maze.yOffset;
+//		var c = Math.ceil(x/map.gridW);
+//		var r = Math.ceil(y/map.gridH);
+//		if (r==1 && c==PAUSE_ICON_POS) {
+//			pause();
+//		}  else if (r==1 && c==MAP_ICON_POS) {
+//			toggleOptions();
+//		}
+//	});
 	
 	mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
 	//draw the background image
@@ -1669,8 +1709,8 @@ function onKeyDown(evt){
 					gameStage.clearRect(0,0,gameCanvas.width,gameCanvas.height);
 					//wallStage.clearRect(0,0,wallCanvas.width,wallCanvas.height);
 					//maze.render(wallStage);
-					//renderObject(dragon,gameStage);
-					renderObject(dragon,wallStage);
+					//renderMazeObject(dragon,gameStage);
+					renderMazeObject(dragon,wallStage);
 					game_state=GAME_STATES.PLAYING;
 					break;
 				default:
@@ -1771,11 +1811,6 @@ function stopGameLoop() {
     window.clearTimeout(request);
 }
 
-function renderScreen() {
-    wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
-    maze.render(wallStage);
-}
-
 function update() {
     //Set the right head image depending on the direction
 	setHeadImg(dragon, dir);
@@ -1811,10 +1846,10 @@ function update() {
 
     		maze.isOn(dragon.r, dragon.c);
 		    if (game_state != GAME_STATES.PLAYING) { return; }
-            if (dir!="start") {
-                LEVEL_SCORE += EARNED_POINTS[MOVE_DELAY];
-                renderScore();
-    		}
+            //if (dir!="start") {
+            //    //LEVEL_SCORE += EARNED_POINTS[MOVE_DELAY];
+            //    //renderScore(wallStage);
+    		//}
 			maze.addPoint(dragon);
 
 
@@ -1906,6 +1941,54 @@ function update() {
 /* Rendering functions               */
 /*************************************/
 
+
+/** roundRect
+ * @author Juan Mendes
+ * http://js-bits.blogspot.com/2010/07/canvas-rounded-corner-rectangles.html
+ * 
+ * Draws a rounded rectangle using the current state of the canvas. 
+ * If you omit the last three params, it will draw a rectangle 
+ * outline with a 5 pixel border radius 
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Number} x The top left x coordinate
+ * @param {Number} y The top left y coordinate 
+ * @param {Number} width The width of the rectangle 
+ * @param {Number} height The height of the rectangle
+ * @param {Number} radius The corner radius. Defaults to 5;
+ * @param {Boolean} fill string reprsenting color for rectanble fill. 
+ * @param {Boolean} stroke Whether to stroke the rectangle. Defaults to true.
+ */
+function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+  if (typeof stroke == "undefined" ) {
+    stroke = true;
+  }
+  if (typeof radius === "undefined") {
+    radius = 5;
+  }
+
+  if (typeof fill === "undefined") {
+	fill = false;
+	}
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  if (stroke) {
+    ctx.stroke();
+  }
+  if (fill) {
+	ctx.fillStyle = fill;
+    ctx.fill();
+  }        
+}
+
 // updates the current score by adding p points to it
 function updateScore(p) {
        SCORE += p;
@@ -1917,9 +2000,15 @@ function printState () {
 }
 
 //Prints text at x and y on the given stage
-function stagePrint(text, x, y, stage) {
-	stage.fillStyle = '#000';
-	stage.font = '12px sans-serif';
+function stagePrint(text, x, y, stage, fill, font) {
+	if (typeof fill === "undefined") {
+		fill = "#000";
+	}
+	if (typeof font === "undefined") {
+		font = "18px StarPerv";
+	}
+	stage.fillStyle = fill;
+	stage.font = font;
 	stage.textBaseline = 'top';
 	stage.fillText(text, x, y);
 }
@@ -1929,25 +2018,46 @@ function stagePrint(text, x, y, stage) {
 function renderScreen() {
     wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
     maze.render(wallStage);
+	renderControls(wallStage);
 }
 
+function renderControls(stage) {
+	renderScore(stage);
+	//render mapicon
+	//render pause 
+	var xy = maze.grid2canvas(1, MAP_ICON_POS);
+	renderObject(stage, MAP_ICON, xy.x, 0, MAP_ICON.width, MAP_ICON.height);
 
-function renderControls(c) {
-	
+	xy = maze.grid2canvas(1, PAUSE_ICON_POS);
+	renderObject(stage, PAUSE_ICON, xy.x, 0, PAUSE_ICON.width, PAUSE_ICON.height);
 }
 
 // prints the new score
-function renderScore() {
-        $('#total_score').text(pdm.state.totalScore);
-        $('#level_score').text(LEVEL_SCORE);
-        $('#current_level').text(pdm.state.currentLevel+1);
+function renderScore(stage) {
+		//draw background box
+		roundRect(stage, 20, 12, 160, 24, 5, "rgba(0,0,0, 0.8)", false);
+		
+		//render Panda
+		renderObject(stage, PANDA_IMG, 15, 5, PANDA_IMG.width, PANDA_IMG.height);
+		//render total score
+		stagePrint("x" + pdm.state.totalScore+" + "+LEVEL_SCORE,  46, 16, stage, "#fff");
+		//render current score
+//        $('#total_score').text(pdm.state.totalScore);
+//        $('#level_score').text(LEVEL_SCORE);
+//        $('#current_level').text(pdm.state.currentLevel+1);
 }
 
+
+//Abstract the details of drawing to support multiple platoforms.
+//Today, only rendering on HTML5 cavas is supported, but not for long
+function renderObject(stage, img, x, y, w, h) {
+	stage.drawImage(img,x,y, w, h);
+}
 
 /*
 * Default rendering engine
 */
-function renderObject($obj, stage) {
+function renderMazeObject($obj, stage) {
 	if ($obj.img == undefined){ return; }
 	var xy=maze.grid2canvas($obj.r, $obj.c);
     var x = xy.x+$obj.xOffset;
@@ -1957,11 +2067,12 @@ function renderObject($obj, stage) {
 //	    y=getScreenY(x,y)+$obj.yOffset;
 //    }
 	try {
-		stage.drawImage($obj.img,x,y, $obj.img.width*SPRITE_SCALE, $obj.img.height*SPRITE_SCALE);
+		renderObject(stage, $obj.img,x,y, $obj.img.width*SPRITE_SCALE, $obj.img.height*SPRITE_SCALE);
 		if ($obj.obj_type && $obj.obj_type == TYPES.GOAL && DEBUG) {
-			stagePrint($obj.destination, xy.x+Math.floor(GRID_W/2), xy.y, stage);
+			stagePrint($obj.destination, xy.x+Math.floor(GRID_W/2), xy.y, stage, "#000", "12px sans-serif");
 		}
 	} catch($error) {
+		alert($error.message);
 		console.log("Error rendering object: "+ $error.message)
 	}
 }
