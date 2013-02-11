@@ -23,7 +23,7 @@
             <source src="audio/victory.mp3" type="audio/mp3" />
             <source src="audio/victory.ogg" type="audio/ogg" />
         </audio>
-        <div id="lightbox">
+        <div id="lightbox" class="lightbox no-display">
 			<canvas class="canvas" id="map-canvas" style="z-index: 4;"></canvas>
 
         	<!-- <div class="ops_panel" id="options_text"> -->
@@ -33,11 +33,11 @@
 						<li id="ctrl_speed"> <img src="<%= asset_path('options_speed.png') %>"></li>
 						<li id="ctrl_fx">
 							<img id="fx-on" src="<%= asset_path('options_soundfx_on.png') %>">
-							<img id="fx-off" class="hidden"  src="<%= asset_path('options_soundfx_off.png') %>">
+							<img id="fx-off" class="no-display"  src="<%= asset_path('options_soundfx_off.png') %>">
 						</li>
 						<li id="ctrl_music">
 							<img id="music-on" src="<%= asset_path('options_music_on.png') %>">
-							<img id="music-off" class="hidden" src="<%= asset_path('options_music_off.png') %>">
+							<img id="music-off" class="no-display" src="<%= asset_path('options_music_off.png') %>">
 						</li>
 						<li id="home"><img src="<%= asset_path('options_home.png') %>"></li>
 						<li id="options_link"><img src="<%= asset_path('options_back.png') %>"></li>
@@ -62,11 +62,22 @@
 				
         	</div>
       </div>
-        <div id="scorebar">
-                <span>Level:<span id="current_level">0</span></span>
-                <span>Score: 
-                  <span id="total_score">0</span>+<span id="level_score">0</span></span>
-                <a href="#" id="options_link">options</a>
+		<div id="alert" class="canvas no-display lightbox">
+			<p id="alert-text" class="alert ">&nbsp;</p>
+			<a id="alert-close" href="#" class="alert-button">ok</a>
+		</div>
+		</div>
+        <div id="scorebar" class="scorebar">
+                <!-- <span>Level:<span id="current_level">0</span></span> -->
+				<ul>
+					<li id="score">
+							<img src="<%= asset_path('Panda.png') %>">
+							<span id="total_score">0</span>+<span id="level_score">0</span></span>
+					</li>
+					<li id="mapItem"><img src="<%= asset_path('mapItem.png') %>"></li>
+				</ul>
+				<div id="pause">||</div>
+                <!-- <a href="#" id="options_link">options</a> -->
         </div>
         <div class="canvas" id="game-content">
                 <canvas class="canvas" id="tile-canvas" style="z-index: 1;"></canvas>

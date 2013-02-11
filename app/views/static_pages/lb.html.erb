@@ -307,6 +307,19 @@
 					}
 				}
 			);
+
+			$('#loadLevel').click(function (e) {
+					e.preventDefault();
+					var l = parseInt($('#loadLevelStr').val());
+					var lvls = init_levels();
+					try {
+						initLbMaze(lvls[l].originalMazeStr);
+						refreshMaze();
+					} catch(e) {
+						alert("Could not load level! "+ e);
+					}
+				}
+			);
 			  
 	        init(function () {
 	          //wait until images are actually loaded
@@ -354,6 +367,7 @@
 			</ul>
 			<p class="ctrlText"><span>Maze string</span><br><span id="curMazeStr">&nbsp;</span></p>
 			<p class="ctlrText"><input id="loadStr" type="text" name="loadStr" size="50"> <a href="#" id="load">load</a></p>
+			<p class="ctlrText"><input id="loadLevelStr" type="text" name="loadLevelStr" size="3"> <a href="#" id="loadLevel">load level</a></p>
 		</div>
 		<!--
 		<span >X = <span id="cx">&nbsp;</span> </span>
