@@ -76,6 +76,8 @@ var PAUSE_ICON;
 var MAP_HEADER_BG;
 var BACK_IMG;
 
+var OPS_TARGET_W;
+var OPS_TARGET_H;
 var OPS_HOME_IMG;
 var OPS_FX_ON_IMG;
 var OPS_FX_OFF_IMG;
@@ -1313,6 +1315,9 @@ function loadAssets() {
 		OPS_SOUND_IMG = OPS_SOUND_ON_IMG;
 		OPS_FX_IMG = OPS_FX_ON_IMG;
 		OPS_SPEED_IMG = OPS_SPEED_FAST_IMG;
+		OPS_TARGET_W = OPS_HOME_IMG.width*(SPRITE_SCALE/2);
+		OPS_TARGET_H = OPS_HOME_IMG.height*(SPRITE_SCALE/2);
+		
 
     }
 }
@@ -1375,15 +1380,16 @@ function pauseClick(e, evt) {
         var x = e.pageX - pos.x - maze.xOffset - optionsX - opsPad;
         var y = e.pageY - pos.y - maze.yOffset;
 		if (y>= GRID_H*5+opsPad && y <= GRID_H*5+opsPad+optionsH && x>=0) {
-			if (x< OPS_HOME_IMG.width) {
+			if (x< OPS_TARGET_W) {
 				changeSpeed();
-			} else if (x <=OPS_HOME_IMG.width*2+opsPad) {
+			} else if (x <=OPS_TARGET_W*2+opsPad) {
 				toggleFX();
-			} else if (x <= OPS_HOME_IMG.width*3+2*opsPad) {
+			} else if (x <= OPS_TARGET_W*3+2*opsPad) {
 				toggleMusic();
-			} else if (x <= OPS_HOME_IMG.width*4+3*opsPad) {
+			} else if (x <= OPS_TARGET_W*4+3*opsPad) {
 				window.location = "/";
 			}
+			renderPauseScreen();
 		} else if (y>=GRID_H*4-(BACK_IMG.height/2) && y <= GRID_H*4+(BACK_IMG.height/2) &&
 					x >= optionsW-(BACK_IMG.width/2) &&
 					x <= optionsW+(BACK_IMG.width/2) ) {
@@ -1884,6 +1890,9 @@ function startGameLoop() {
 
 function gameLoop() {
 	//request=window.requestAnimFrame(gameLoop,gameCanvas);
+	if (request) {
+		stopGameLoop();
+	}
     request = window.setTimeout(gameLoop, 1000 / 60);
 	update();
 }
@@ -1891,6 +1900,7 @@ function gameLoop() {
 function stopGameLoop() {
 	//window.cancelRequestAnimFrame(request);
     window.clearTimeout(request);
+	request = undefined;
 }
 
 var PAUSE_Y = -103*SPRITE_SCALE;
@@ -2189,12 +2199,38 @@ function renderControls(stage, offset) {
 	renderObject(stage, PAUSE_ICON, xy.x+offset, 0, PAUSE_ICON.width*(SPRITE_SCALE/2), PAUSE_ICON.height*(SPRITE_SCALE/2));
 }
 
+//Renders the pause screen
 function renderPauseScreen() {
 	var opsArr = [OPS_SPEED_IMG, OPS_FX_IMG, OPS_SOUND_IMG, OPS_HOME_IMG];
-	roundRect(wallStage, optionsX, PAUSE_Y, optionsW, optionsH, 10*SPRITE_SCALE, "rgba(0,0,0, 0.8)", false);
+	roundRect(wallStage, optionsX, PAUSE_Y, 
+		optionsW, optionsH, 10*SPRITE_SCALE, 
+		"rgba(0,0,0, 0.8)", false);
 	for (var i=0; i < opsArr.length; i++) {
-		renderObject(wallStage, BACK_IMG, optionsX+optionsW-(BACK_IMG.width/2), PAUSE_Y-(BACK_IMG.height/2), BACK_IMG.width*(SPRITE_SCALE/2), BACK_IMG.height*(SPRITE_SCALE/2));
-		renderObject(wallStage, opsArr[i], optionsX+opsPad+OPS_HOME_IMG.width*i+opsPad*i, PAUSE_Y+GRID_H+opsPad, OPS_HOME_IMG.width*(SPRITE_SCALE/2), OPS_HOME_IMG.height*(SPRITE_SCALE/2));
+		var tmpX = optionsX+opsPad+OPS_TARGET_W*i+opsPad*i;
+		var tmpY = PAUSE_Y+GRID_H+opsPad;
+		renderObject(wallStage, BACK_IMG, optionsX+optionsW-(BACK_IMG.width/2),
+			PAUSE_Y-(BACK_IMG.height/2), 
+			BACK_IMG.width*(SPRITE_SCALE/2),
+			BACK_IMG.height*(SPRITE_SCALE/2));
+		renderObject(wallStage, opsArr[i], tmpX, tmpY, OPS_TARGET_W,
+			OPS_TARGET_H);
+		switch (i) {
+			case 0:
+				stagePrint("speed", tmpX+opsPad, tmpY+OPS_TARGET_H, wallStage, "#fff", "24px StarPerv");
+				break;
+			case 1:
+				stagePrint("fx", tmpX+opsPad+opsPad+opsPad+opsPad, tmpY+OPS_TARGET_H, wallStage, "#fff", "24px StarPerv");
+				break;
+			case 2:
+				stagePrint("music", tmpX+opsPad, tmpY+OPS_TARGET_H, wallStage, "#fff", "24px StarPerv");
+				break;
+			case 3:
+				stagePrint("home", tmpX+opsPad+opsPad+opsPad, tmpY+OPS_TARGET_H, wallStage, "#fff", "24px StarPerv");
+				break;
+			default:
+				//no op
+				break;
+		}
 	}
 }
 
