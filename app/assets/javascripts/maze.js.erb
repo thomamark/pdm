@@ -24,10 +24,11 @@ var DEFAULT_WALL_YOFFSET = -10*SPRITE_SCALE;	//Need to get rid of this hack even
 var DEFAULT_STARTPT_YOFFSET = -13*SPRITE_SCALE;
 var DEFAULT_GOAL_YOFFSET = -GRID_H;
 var DEBUG = false;
+var PDM_SS_IMG;
 var BORDER_IMG; 
 var SNAKE_IMG; 
-var GOAL_IMG; 
 var STAR_IMG; 
+var GOAL_IMG; 
 var PANDA_IMG;
 var PORTAL_IMG;
 var HEAD_UP_IMG;
@@ -100,7 +101,7 @@ var MAP_VISIBLE = false;
 var IMG_PREFIX = "img";
 var IMG_CACHE = {};
 
-var POST_ASSET_load_FN; //hacky way to get images to load in lb
+var POST_ASSET_LOAD_FN; //hacky way to get images to load in lb
 
 var IMGDIR ="assets"
 var AUDIODIR ="assets"
@@ -202,6 +203,11 @@ var THEME;
 /*************************************/
 /* Game objects                      */
 /*************************************/
+
+/*
+* Sprites wrap images and allow for things like animations
+* and efficient use of sprite sheets.
+*/
 
 /*A maze object is a collection of points
  @arg img a an image object to render for this point
@@ -757,6 +763,7 @@ Maze.prototype.fixWallImages = function() {
 								!this.isType(i,j+1, TYPES.WALL)) {
                     				//Fix vertical wall image
 				                    this.points[i][j].img=VERTICAL_WALL_IMG;
+                      				//this.points[i][j].xOffset=16;
            	  } else if (this.isType(i,j-1,TYPES.WALL) &&
 								this.isType(i, j+1, TYPES.WALL) &&
 								!this.isType(i-1,j, TYPES.WALL) &&
@@ -1126,7 +1133,7 @@ function findPos(obj) {
 /*************************************/
 
 function init(fn) { 
-    POST_ASSET_LOAD_FN = fn;
+    POST_ASSET_LOAD_FN = (fn) ? fn : postAssetLoad;
 
     //Short-circuit if we don't want to load assets.
     if (!LOAD_ASSETS) { return;}
@@ -1176,148 +1183,196 @@ function initGameState() {
 }
 
 function loadAssets() {
-    if (ISOMETRIC) {
-        GRID_W = 28;
-        GRID_H = 28;
-	    BORDER_IMG = createImgAsset("border", 
-            "<%= asset_path('border_iso.png') %>");
-	    SNAKE_IMG = createImgAsset("snake", 
-            "<%= asset_path('snake_iso.png') %>");
-	    GOAL_IMG = createImgAsset("goal",
-            "<%= asset_path('goal_iso.png') %>");
-    } else {
-//	    BORDER_IMG = createImgAsset("border",
-//            "<%= asset_path('border_19x19.png') %>");
-//	    SNAKE_IMG = createImgAsset("dragon",
-//            "<%= asset_path('mover_19x19.png') %>");
-//	    GOAL_IMG = createImgAsset("goal",
-//            "<%= asset_path('goal_19x19.png') %>");
-//	    STAR_IMG = createImgAsset("star",
-//            "<%= asset_path('star_19x19.png') %>");
-	    PANDA_IMG = createImgAsset("panda",
-            "<%= asset_path('Panda.png') %>");
-	    PORTAL_IMG = createImgAsset("portal",
-            "<%= asset_path('Goal_1.png') %>");
-	    HEAD_UP_IMG = createImgAsset("head_up",
-            "<%= asset_path('Head_Up.png') %>");
-	    HEAD_DOWN_IMG = createImgAsset("head_down",
-            "<%= asset_path('Head_Down.png') %>");
-	    HEAD_LEFT_IMG = createImgAsset("head_left",
-            "<%= asset_path('Head_Left.png') %>");
-	    HEAD_RIGHT_IMG = createImgAsset("head_right",
-            "<%= asset_path('Head_Right.png') %>");
+//	    PANDA_IMG = createImgAsset("panda",
+//            "<%= asset_path('Panda.png') %>");
+//	    PORTAL_IMG = createImgAsset("portal",
+//            "<%= asset_path('Goal_1.png') %>");
+//	    HEAD_UP_IMG = createImgAsset("head_up",
+//            "<%= asset_path('Head_Up.png') %>");
+//	    HEAD_DOWN_IMG = createImgAsset("head_down",
+//            "<%= asset_path('Head_Down.png') %>");
+//	    HEAD_LEFT_IMG = createImgAsset("head_left",
+//            "<%= asset_path('Head_Left.png') %>");
+//	    HEAD_RIGHT_IMG = createImgAsset("head_right",
+//            "<%= asset_path('Head_Right.png') %>");
+//	    TAIL_UP_IMG = createImgAsset("tail_up",
+//            "<%= asset_path('Tail_Up.png') %>");
+//	    TAIL_DOWN_IMG = createImgAsset("tail_down",
+//            "<%= asset_path('Tail_Down.png') %>");
+//	    TAIL_LEFT_IMG = createImgAsset("tail_left",
+//            "<%= asset_path('Tail_Right.png') %>");
+//	    TAIL_RIGHT_IMG = createImgAsset("tail_right",
+//            "<%= asset_path('Tail_Left.png') %>");
+//        DOWN_TO_LEFT_IMG = createImgAsset("dtl",
+//            "<%= asset_path('Body_UpToLeft.png') %>");
+//        DOWN_TO_RIGHT_IMG = createImgAsset("dtr",
+//            "<%= asset_path('Body_UpToRight.png') %>");
+//        DOWN_TO_UP_IMG = createImgAsset("dtu",
+//            "<%= asset_path('Body_DownToUp.png') %>");
+//        LEFT_TO_DOWN_IMG= createImgAsset("ltd",
+//            "<%= asset_path('Body_RightToDown.png') %>");
+//        LEFT_TO_RIGHT_IMG= createImgAsset("ltr",
+//            "<%= asset_path('Body_RightToLeft.png') %>");
+//        LEFT_TO_UP_IMG= createImgAsset("ltu",
+//            "<%= asset_path('Body_RightToUp.png') %>");
+//        RIGHT_TO_DOWN_IMG= createImgAsset("rtd",
+//            "<%= asset_path('Body_LeftToDown.png') %>");
+//        RIGHT_TO_LEFT_IMG= createImgAsset("rtl",
+//            "<%= asset_path('Body_LeftToRight.png') %>");
+//        RIGHT_TO_UP_IMG= createImgAsset("rtu",
+//            "<%= asset_path('Body_UpToLeft.png') %>");
+//        UP_TO_DOWN_IMG= createImgAsset("utd",
+//            "<%= asset_path('Body_UpToDown.png') %>");
+//        UP_TO_LEFT_IMG= createImgAsset("utl",
+//            "<%= asset_path('Body_DownToLeft.png') %>");
+//        UP_TO_RIGHT_IMG= createImgAsset("utr",
+//            "<%= asset_path('Body_DownToRight.png') %>");
+//
+//        TILES_IMG_ARRAY= [];
+//        TILES_IMG_ARRAY.push(createImgAsset("tile_1",
+//              "<%= asset_path('tiles.png') %>"));
+//        TILES_IMG_ARRAY.push(createImgAsset("tile_2",
+//              "<%= asset_path('tiles_2.png') %>"));
+//        TILES_IMG_ARRAY.push(createImgAsset("tile_3",
+//              "<%= asset_path('tiles_3.png') %>"));
+//        TILES_IMG_ARRAY.push(createImgAsset("tile_4",
+//              "<%= asset_path('tiles_4.png') %>"));
+//
+//				//load wall images
+//        VERTICAL_WALL_IMG = createImgAsset("vw",
+//            "<%= asset_path('wall_stright_horizontal.png') %>");
+//        HORIZONTAL_WALL_IMG = createImgAsset("hw",
+//            "<%= asset_path('wall_stright_vertical.png') %>");
+//	    WALL_BLOCK_IMG = createImgAsset("pillar",
+//          "<%= asset_path('wall_block.png') %>");
+//
+//		WALL_9S_TL_IMG = createImgAsset('wall_9s_tl', 
+//          "<%= asset_path('wall_9slice_tl.png') %>");
+//		WALL_9S_TC_IMG = createImgAsset('wall_9s_tc', 
+//		    "<%= asset_path('wall_9slice_tc.png') %>");
+//		WALL_9S_TR_IMG= createImgAsset('wall_9s_tr', 
+//		    "<%= asset_path('wall_9slice_tr.png') %>");
+//		WALL_9S_ML_IMG= createImgAsset('wall_9s_ml', 
+//		    "<%= asset_path('wall_9slice_ml.png') %>");
+//		WALL_9S_MC_IMG = createImgAsset('wall_9s_mc', 
+//		    "<%= asset_path('wall_9slice_mc.png') %>");
+//		WALL_9S_MR_IMG= createImgAsset('wall_9s_mr', 
+//		    "<%= asset_path('wall_9slice_mr.png') %>");
+//		WALL_9S_BL_IMG= createImgAsset('wall_9s_bl', 
+//		    "<%= asset_path('wall_9slice_bl.png') %>");
+//		WALL_9S_BC_IMG= createImgAsset('wall_9s_bc', 
+//		    "<%= asset_path('wall_9slice_bc.png') %>");
+//		WALL_9S_BR_IMG= createImgAsset('wall_9s_br', 
+//          "<%= asset_path('wall_9slice_br.png') %>");
+//		COMPLETE_IMG = createImgAsset('complete_img', "<%= asset_path('map_complete_128x128.png') %>");
+//		CROWN_IMG = createImgAsset('crown_img', "<%= asset_path('map_crown_128x128.png') %>");
+//		MAP_DRAGON_IMG = createImgAsset('map_dragon_img', "<%= asset_path('map_dragon_128x128.png') %>");
+//		MAP_ICON = createImgAsset('map_icon_img', "<%= asset_path('mapIcon.png') %>");
+//		PAUSE_ICON = createImgAsset('pause_icon_img', "<%= asset_path('pauseIcon.png') %>");
+//		BACK_IMG = createImgAsset('back_img', "<%= asset_path('backIcon.png') %>");
+//		// Options panel images
+//		OPS_HOME_IMG = createImgAsset('ops_home', "<%= asset_path('options_home_white.png') %>");
+//		OPS_FX_ON_IMG = createImgAsset('ops_fx_on', "<%= asset_path('options_fx_on_white.png') %>");
+//		OPS_FX_OFF_IMG = createImgAsset('ops_fx_off', "<%= asset_path('options_fx_off_white.png') %>")
+//		OPS_SOUND_ON_IMG = createImgAsset('ops_sound_on', "<%= asset_path('options_sound_on_white.png') %>")
+//		OPS_SOUND_OFF_IMG = createImgAsset('ops_sound_off', "<%= asset_path('options_sound_off_white.png') %>")
+//		OPS_SPEED_FAST_IMG = createImgAsset('ops_speed_fast', "<%= asset_path('options_speed_fast_white.png') %>")
+//		OPS_SPEED_SLOW_IMG = createImgAsset('ops_speed_slow', "<%= asset_path('options_speed_slow_white.png') %>")
 
-	    TAIL_UP_IMG = createImgAsset("tail_up",
-            "<%= asset_path('Tail_Up.png') %>");
-	    TAIL_DOWN_IMG = createImgAsset("tail_down",
-            "<%= asset_path('Tail_Down.png') %>");
-	    TAIL_LEFT_IMG = createImgAsset("tail_left",
-            "<%= asset_path('Tail_Right.png') %>");
-	    TAIL_RIGHT_IMG = createImgAsset("tail_right",
-            "<%= asset_path('Tail_Left.png') %>");
-        DOWN_TO_LEFT_IMG = createImgAsset("dtl",
-            "<%= asset_path('Body_UpToLeft.png') %>");
-        DOWN_TO_RIGHT_IMG = createImgAsset("dtr",
-            "<%= asset_path('Body_UpToRight.png') %>");
-        DOWN_TO_UP_IMG = createImgAsset("dtu",
-            "<%= asset_path('Body_DownToUp.png') %>");
-        LEFT_TO_DOWN_IMG= createImgAsset("ltd",
-            "<%= asset_path('Body_RightToDown.png') %>");
-        LEFT_TO_RIGHT_IMG= createImgAsset("ltr",
-            "<%= asset_path('Body_RightToLeft.png') %>");
-        LEFT_TO_UP_IMG= createImgAsset("ltu",
-            "<%= asset_path('Body_RightToUp.png') %>");
-        RIGHT_TO_DOWN_IMG= createImgAsset("rtd",
-            "<%= asset_path('Body_LeftToDown.png') %>");
-        RIGHT_TO_LEFT_IMG= createImgAsset("rtl",
-            "<%= asset_path('Body_LeftToRight.png') %>");
-        RIGHT_TO_UP_IMG= createImgAsset("rtu",
-            "<%= asset_path('Body_UpToLeft.png') %>");
-        UP_TO_DOWN_IMG= createImgAsset("utd",
-            "<%= asset_path('Body_UpToDown.png') %>");
-        UP_TO_LEFT_IMG= createImgAsset("utl",
-            "<%= asset_path('Body_DownToLeft.png') %>");
-        UP_TO_RIGHT_IMG= createImgAsset("utr",
-            "<%= asset_path('Body_DownToRight.png') %>");
+		//Sprite sheets
+		PDM_SS_IMG = createImgAsset('pdm_static_ss', "<%= asset_path('pdm_dragon_panda.png') %>");
+		WALL_TILES_SS_IMG = createImgAsset('wall_tiles_ss', "<%= asset_path('pdm_walls_tiles.png') %>");
+		OPTIONS_SS_IMG = createImgAsset('options_map_ss', "<%= asset_path('pdm_options_map.png') %>");
+		GOAL_SS_IMG = createImgAsset('Goal_all', "<%= asset_path('Goal_all.png') %>");
 
-        TILES_IMG_ARRAY= [];
-        TILES_IMG_ARRAY.push(createImgAsset("tile_1",
-              "<%= asset_path('tiles.png') %>"));
-        TILES_IMG_ARRAY.push(createImgAsset("tile_2",
-              "<%= asset_path('tiles_2.png') %>"));
-        TILES_IMG_ARRAY.push(createImgAsset("tile_3",
-              "<%= asset_path('tiles_3.png') %>"));
-        TILES_IMG_ARRAY.push(createImgAsset("tile_4",
-              "<%= asset_path('tiles_4.png') %>"));
-
-				//load wall images
-        VERTICAL_WALL_IMG = createImgAsset("vw",
-            "<%= asset_path('wall_stright_horizontal.png') %>");
-        HORIZONTAL_WALL_IMG = createImgAsset("hw",
-            "<%= asset_path('wall_stright_vertical.png') %>");
-	    WALL_BLOCK_IMG = createImgAsset("pillar",
-          "<%= asset_path('wall_block.png') %>");
-
-		WALL_9S_TL_IMG = createImgAsset('wall_9s_tl', 
-          "<%= asset_path('wall_9slice_tl.png') %>");
-		WALL_9S_TC_IMG = createImgAsset('wall_9s_tc', 
-		    "<%= asset_path('wall_9slice_tc.png') %>");
-		WALL_9S_TR_IMG= createImgAsset('wall_9s_tr', 
-		    "<%= asset_path('wall_9slice_tr.png') %>");
-		WALL_9S_ML_IMG= createImgAsset('wall_9s_ml', 
-		    "<%= asset_path('wall_9slice_ml.png') %>");
-		WALL_9S_MC_IMG = createImgAsset('wall_9s_mc', 
-		    "<%= asset_path('wall_9slice_mc.png') %>");
-		WALL_9S_MR_IMG= createImgAsset('wall_9s_mr', 
-		    "<%= asset_path('wall_9slice_mr.png') %>");
-		WALL_9S_BL_IMG= createImgAsset('wall_9s_bl', 
-		    "<%= asset_path('wall_9slice_bl.png') %>");
-		WALL_9S_BC_IMG= createImgAsset('wall_9s_bc', 
-		    "<%= asset_path('wall_9slice_bc.png') %>");
-		WALL_9S_BR_IMG= createImgAsset('wall_9s_br', 
-          "<%= asset_path('wall_9slice_br.png') %>");
-
-		//All the corner walls within a 9 slice are the same right now.
-		//FIXME: add real images for 9-slice corners
-		WALL_9S_MCTR_IMG= 
-				WALL_9S_MCTL_IMG= 
-				WALL_9S_MCBR_IMG= 
-				WALL_9S_MCBL_IMG=
-				WALL_9S_MC_IMG;
+		/* one-off images (not in sprite sheet) */
+		MAP_IMG = createImgAsset('map', "<%= asset_path('map.png') %>");
+		MAP_HEADER_BG = createImgAsset('map_header_bg', "<%= asset_path('optionsHeaderBg.png') %>");
 
 		//Only used in level builder
-      		DELETE_IMG = createImgAsset("delete", 
+      	DELETE_IMG = createImgAsset("delete", 
             "<%= asset_path('delete.png') %>");
 		PIX_IMG = createImgAsset('pix_1x1', "<%= asset_path('1x1.gif') %>");
-		
-		MAP_IMG = createImgAsset('map', "<%= asset_path('map.png') %>");
-		COMPLETE_IMG = createImgAsset('complete_img', "<%= asset_path('map_complete_128x128.png') %>");
-		CROWN_IMG = createImgAsset('crown_img', "<%= asset_path('map_crown_128x128.png') %>");
-		MAP_DRAGON_IMG = createImgAsset('map_dragon_img', "<%= asset_path('map_dragon_128x128.png') %>");
-		MAP_ICON = createImgAsset('map_icon_img', "<%= asset_path('mapIcon.png') %>");
-		PAUSE_ICON = createImgAsset('pause_icon_img', "<%= asset_path('pauseIcon.png') %>");
+}
 
-		MAP_HEADER_BG = createImgAsset('map_header_bg', "<%= asset_path('optionsHeaderBg.png') %>");
-		BACK_IMG = createImgAsset('back_img', "<%= asset_path('backIcon.png') %>");
+function postAssetLoad() {
+	PANDA_IMG = SPRITES['Panda.png'];
+	//PORTAL_IMG = SPRITES['Goal_1.png'];
+	PORTAL_IMG = SPRITES['Goal_all'];
+	HEAD_UP_IMG = SPRITES['Head_Up.png'];
+	HEAD_DOWN_IMG = SPRITES['Head_Down.png'];
+	HEAD_LEFT_IMG = SPRITES['Head_Left.png'];
+	HEAD_RIGHT_IMG = SPRITES['Head_Right.png'];
+	TAIL_UP_IMG = SPRITES['Tail_Up.png'];
+	TAIL_DOWN_IMG = SPRITES['Tail_Down.png'];
+	TAIL_LEFT_IMG = SPRITES['Tail_Right.png'];
+	TAIL_RIGHT_IMG = SPRITES['Tail_Left.png'];
+	DOWN_TO_LEFT_IMG = SPRITES['Body_UpToLeft.png'];
+	DOWN_TO_RIGHT_IMG = SPRITES['Body_UpToRight.png'];
+	DOWN_TO_UP_IMG = SPRITES['Body_DownToUp.png'];
+	LEFT_TO_DOWN_IMG= SPRITES['Body_RightToDown.png'];
+	LEFT_TO_RIGHT_IMG= SPRITES['Body_RightToLeft.png'];
+	LEFT_TO_UP_IMG= SPRITES['Body_RightToUp.png'];
+	RIGHT_TO_DOWN_IMG= SPRITES['Body_LeftToDown.png'];
+	RIGHT_TO_LEFT_IMG= SPRITES['Body_LeftToRight.png'];
+	RIGHT_TO_UP_IMG= SPRITES['Body_UpToLeft.png'];
+	UP_TO_DOWN_IMG= SPRITES['Body_UpToDown.png'];
+	UP_TO_LEFT_IMG= SPRITES['Body_DownToLeft.png'];
+	UP_TO_RIGHT_IMG= SPRITES['Body_DownToRight.png'];
 
-		IMG_CACHE[MAP_IMG.pdmId] = MAP_IMG;
-		IMG_CACHE[CROWN_IMG.pdmId] = CROWN_IMG;
-		IMG_CACHE[COMPLETE_IMG.pdmId] = COMPLETE_IMG;
+	//load wall images
+	VERTICAL_WALL_IMG = SPRITES['wall_stright_horizontal.png'];
+	HORIZONTAL_WALL_IMG = SPRITES['wall_stright_vertical.png'];
+	WALL_BLOCK_IMG = SPRITES['wall_block.png'];
+	WALL_9S_TL_IMG = SPRITES['wall_9slice_tl.png'];
+	WALL_9S_TC_IMG = SPRITES['wall_9slice_tc.png'];
+	WALL_9S_TR_IMG= SPRITES['wall_9slice_tr.png'];
+	WALL_9S_ML_IMG= SPRITES['wall_9slice_ml.png'];
+	WALL_9S_MC_IMG = SPRITES['wall_9slice_mc.png'];
+	WALL_9S_MR_IMG= SPRITES['wall_9slice_mr.png'];
+	WALL_9S_BL_IMG= SPRITES['wall_9slice_bl.png'];
+	WALL_9S_BC_IMG= SPRITES['wall_9slice_bc.png'];
+	WALL_9S_BR_IMG= SPRITES['wall_9slice_br.png'];
+	COMPLETE_IMG = SPRITES['map_complete_128x128.png'];
+	CROWN_IMG = SPRITES['map_crown_128x128.png'];
+	MAP_DRAGON_IMG = SPRITES['map_dragon_128x128.png'];
+	MAP_ICON = SPRITES['mapIcon.png'];
+	PAUSE_ICON = SPRITES['pauseIcon.png'];
+	BACK_IMG = SPRITES['backIcon.png'];
 
-		OPS_HOME_IMG = createImgAsset('ops_home', "<%= asset_path('options_home_white.png') %>");
-		OPS_FX_ON_IMG = createImgAsset('ops_fx_on', "<%= asset_path('options_fx_on_white.png') %>");
-		OPS_FX_OFF_IMG = createImgAsset('ops_fx_off', "<%= asset_path('options_fx_off_white.png') %>")
-		OPS_SOUND_ON_IMG = createImgAsset('ops_sound_on', "<%= asset_path('options_sound_on_white.png') %>")
-		OPS_SOUND_OFF_IMG = createImgAsset('ops_sound_off', "<%= asset_path('options_sound_off_white.png') %>")
-		OPS_SPEED_FAST_IMG = createImgAsset('ops_speed_fast', "<%= asset_path('options_speed_fast_white.png') %>")
-		OPS_SPEED_SLOW_IMG = createImgAsset('ops_speed_slow', "<%= asset_path('options_speed_slow_white.png') %>")
-		
-		OPS_SOUND_IMG = OPS_SOUND_ON_IMG;
-		OPS_FX_IMG = OPS_FX_ON_IMG;
-		OPS_SPEED_IMG = OPS_SPEED_FAST_IMG;
-		
+	// Options panel images
+	OPS_HOME_IMG = SPRITES['options_home_white.png'];
+	OPS_FX_ON_IMG = SPRITES['options_fx_on_white.png'];
 
-    }
+	OPS_FX_OFF_IMG = SPRITES['options_fx_off_white.png']
+	OPS_SOUND_ON_IMG = SPRITES['options_sound_on_white.png'];
+	OPS_SOUND_OFF_IMG = SPRITES['options_sound_off_white.png'];
+	OPS_SPEED_FAST_IMG = SPRITES['options_speed_fast_white.png'];
+	OPS_SPEED_SLOW_IMG = SPRITES['options_speed_slow_white.png'];
+	
+    /* Post-processing for assets */
+    TILES_IMG_ARRAY= [
+		SPRITES['tiles.png'],
+		SPRITES['tiles_2.png'],
+		SPRITES['tiles_3.png'],
+		SPRITES['tiles_4.png']]
+
+    //TODO: add all tile images to this array
+    IMG_CACHE[MAP_IMG.pdmId] = MAP_IMG;
+    IMG_CACHE[CROWN_IMG.pdmId] = CROWN_IMG;
+    IMG_CACHE[COMPLETE_IMG.pdmId] = COMPLETE_IMG;
+
+    OPS_SOUND_IMG = OPS_SOUND_ON_IMG;
+    OPS_FX_IMG = OPS_FX_ON_IMG;
+    OPS_SPEED_IMG = OPS_SPEED_FAST_IMG;
+
+    //All the corner walls within a 9 slice are the same right now.
+    //FIXME: add real images for 9-slice corners
+    WALL_9S_MCTR_IMG=
+            WALL_9S_MCTL_IMG=
+            WALL_9S_MCBR_IMG=
+            WALL_9S_MCBL_IMG=
+            WALL_9S_MC_IMG;
 }
 
 
@@ -1325,7 +1380,7 @@ function loadAssets() {
 function createImgAsset($id,$src) {
 	var img=new Image();
 	loadFlags[$id]=0;
-	img.onload=function(){onAssetLoaded($id);};
+	img.onload=function(){onAssetLoaded($id, img);};
 	img.src=$src;
 	img.pdmId = IMG_PREFIX + $id;
 //    img.height = GRID_H;
@@ -1333,14 +1388,74 @@ function createImgAsset($id,$src) {
 	return img;
 }
 
-function onAssetLoaded($asset_id) {
-	loadFlags[$asset_id]=1;
+//Load all images
+//for i in sprites, new sprite(ss_img, name)
+//have a map of name : sprite properties (including animation)
+//renderObject will recognize sprites: reuse img, set offset, animate, etc.
+
+//type : {static, animation}
+//Animation-only
+//total_frames: 3
+//width : 32
+//height: 64
+
+function Sprite (img, sx, sy, w, h, scale, total_frames) {
+	this.img = img;
+	this.pdmId = img.pdmId;
+	this.sx = sx;
+	this.sy = sy;
+	this.sprite = true;
+	this.w = w;
+	this.h = h;
+
+	this.scale = (scale) ? scale : SPRITE_SCALE;
+	this.scaled_w = this.width = w*this.scale;
+	this.scaled_h = this.height = h*this.scale;
+
+	//Animation specifics
+	this.current = 0;
+	this.total_frames = (total_frames) ? total_frames : 1;
+}
+
+var SPRITES = {};
+var SS_TYPES = {STATIC : 0, ANIMATION: 1}; //enum of sprite sheet types.
+
+function initSprites(id, img) {
+	var mySprites = SPRITE_MAP[id];
+	if (mySprites == undefined) {return;}
+	switch (mySprites.type) {
+		case SS_TYPES.STATIC:
+			//Need to create sprites for everything in the sheet.
+			for (var i in mySprites.sprites) {
+				var s = mySprites.sprites[i];
+			    SPRITES[i] = new Sprite(img,
+					s.frame.x,s.frame.y,
+					s.frame.w, s.frame.h,
+				 	s.scale);
+			}
+			break;
+		case SS_TYPES.ANIMATION:
+			//Create animation sprite.
+			var s = mySprites;
+			SPRITES[id] = new Sprite(img,
+									0,0, s.w,s.h,
+									s.scale, s.total_frames);
+			break;
+		default:
+			console.log("Unknown spritesheet type found.");
+			break;
+		}
+}
+
+function onAssetLoaded(asset_id, img) {
+	loadFlags[asset_id]=1;
+	initSprites(asset_id, img);
     //Don't start the game until everything's been loaded
 	for(flag in loadFlags) {
 		if(!loadFlags[flag]) {return;}
 	}
-    //Only continue if we want to continue the game
     if (POST_ASSET_LOAD_FN) {POST_ASSET_LOAD_FN();}
+    //Only continue if we want to continue the game
     if (!INIT_GAME) { return;}
 	game_init();
 }
@@ -1389,9 +1504,9 @@ function pauseClick(e, evt) {
 			}
 			renderScreen(ANIM_OFFSET); 
 			renderPauseScreen();
-		} else if (y>=GRID_H*4-(BACK_IMG.height/2) && y <= GRID_H*4+(BACK_IMG.height/2) &&
-					x >= optionsW-(BACK_IMG.width/2) &&
-					x <= optionsW+(BACK_IMG.width/2) ) {
+		} else if (y>=GRID_H*4-(BACK_IMG.scaled_h/2) && y <= GRID_H*4+(BACK_IMG.scaled_h/2) &&
+					x >= optionsW-(BACK_IMG.scaled_w/2) &&
+					x <= optionsW+(BACK_IMG.scaled_w/2) ) {
 				togglePauseScreen();
 		}
 }
@@ -1421,7 +1536,7 @@ function mapClick(e) {
       var pos = findPos(this);
       var x = e.pageX - pos.x - maze.xOffset;
       var y = e.pageY - pos.y - maze.yOffset;
-      if ((x>= 391*SPRITE_SCALE) && (y >= 21*SPRITE_SCALE) && x <= (391*SPRITE_SCALE + BACK_IMG.width*(SPRITE_SCALE/2)) && y <= (21*SPRITE_SCALE + BACK_IMG.height*(SPRITE_SCALE/2))) {
+      if ((x>= 391*SPRITE_SCALE) && (y >= 21*SPRITE_SCALE) && x <= (391*SPRITE_SCALE + BACK_IMG.scaled_w*(SPRITE_SCALE/2)) && y <= (21*SPRITE_SCALE + BACK_IMG.scaled_h*(SPRITE_SCALE/2))) {
           toggleOptions();
       }
 }
@@ -1645,7 +1760,8 @@ function toggleOptions() {
 		mapStage.globalAlpha = 1;
 	
 		mapStage.drawImage(MAP_HEADER_BG,0,0);
-		mapStage.drawImage(BACK_IMG, 391*SPRITE_SCALE, 21*SPRITE_SCALE);
+		renderObject(mapStage, BACK_IMG,  391*SPRITE_SCALE, 21*SPRITE_SCALE);
+		//mapStage.drawImage(BACK_IMG.img, 391*SPRITE_SCALE, 21*SPRITE_SCALE);
 		
 		
 		// var renderOptions = function (stage, map) {
@@ -2011,86 +2127,6 @@ function update() {
     		//}
 			maze.addPoint(dragon);
 
-
-
-			//lastDir = dir;
-//            switch(lastDir) {
-//                    case "start":
-//						maze.addPoint(new Point(getTailImg(dir), 
-//							oldR, oldC, mazeCollision));
-//						break;
-//                    case "left":
-//                        switch(dir) {
-//                            case "left":
-//                                maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "up":
-//                                maze.addPoint(new Point(LEFT_TO_UP_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "down":
-//                                maze.addPoint(new Point(LEFT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                        }
-//                        break;
-//
-//                    case "right":
-//                        switch(dir) {
-//                            case "right":
-//                                maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "up":
-//                                maze.addPoint(new Point(RIGHT_TO_UP_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "down":
-//                                maze.addPoint(new Point(RIGHT_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                        }
-//                        break;
-//
-//                    case "up":
-//                        switch(dir) {
-//                            case "right":
-//                                maze.addPoint(new Point(UP_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "left":
-//                                maze.addPoint(new Point(UP_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "up":
-//                                maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                        }
-//                        break;
-//                     
-//                    case "down":
-//                        switch(dir) {
-//                            case "right":
-//                                maze.addPoint(new Point(DOWN_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "left":
-//                                maze.addPoint(new Point(DOWN_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                            case "down":
-//                                maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-//                                break;
-//                        }
-//                        break;
-//                    default:
-//						switch(dir) {
-//                         	case "right":
-//	                             maze.addPoint(new Point(LEFT_TO_RIGHT_IMG, oldR, oldC, mazeCollision));
-//	                             break;
-//	                         case "left":
-//	                             maze.addPoint(new Point(RIGHT_TO_LEFT_IMG, oldR, oldC, mazeCollision));
-//	                             break;
-//	                         case "up":
-//	                             maze.addPoint(new Point(DOWN_TO_UP_IMG, oldR, oldC, mazeCollision));
-//	                             break;
-//	                         case "down":
-//	                             maze.addPoint(new Point(UP_TO_DOWN_IMG, oldR, oldC, mazeCollision));
-//	                             break;                        
-//						}
-//                }                
-//			lastDir = dir;
           }
         }
 	}
@@ -2186,16 +2222,16 @@ function renderControls(stage, offset) {
 	//draw background box
 	roundRect(stage, 10*SPRITE_SCALE-offset, 6*SPRITE_SCALE, 80*SPRITE_SCALE, 12*SPRITE_SCALE, 3*SPRITE_SCALE, "rgba(0,0,0, 0.8)", false);
 	//render Panda
-	renderObject(stage, PANDA_IMG, 7*SPRITE_SCALE-offset, 3*SPRITE_SCALE, PANDA_IMG.width*(SPRITE_SCALE/2), PANDA_IMG.height*(SPRITE_SCALE/2));
+	renderObject(stage, PANDA_IMG, 7*SPRITE_SCALE-offset, 3*SPRITE_SCALE, SPRITE_SCALE/2);
 	//render total score
 	stagePrint("x" + pdm.state.totalScore+" + "+LEVEL_SCORE,  23*SPRITE_SCALE-offset, 8*SPRITE_SCALE, stage, "#fff");
 	//render mapicon
 	var xy = maze.grid2canvas(1, MAP_ICON_POS);
-	renderObject(stage, MAP_ICON, xy.x+offset, 0, MAP_ICON.width*(SPRITE_SCALE/2), MAP_ICON.height*(SPRITE_SCALE/2));
+	renderObject(stage, MAP_ICON, xy.x+offset, 0);
 
 	//render pause 
 	xy = maze.grid2canvas(1, PAUSE_ICON_POS);
-	renderObject(stage, PAUSE_ICON, xy.x+offset, 0, PAUSE_ICON.width*(SPRITE_SCALE/2), PAUSE_ICON.height*(SPRITE_SCALE/2));
+	renderObject(stage, PAUSE_ICON, xy.x+offset, 0);
 }
 
 //Renders the pause screen
@@ -2207,12 +2243,9 @@ function renderPauseScreen() {
 	for (var i=0; i < opsArr.length; i++) {
 		var tmpX = optionsX+opsPad+OPS_TARGET_W*i+opsPad*i;
 		var tmpY = PAUSE_Y+GRID_H+opsPad;
-		renderObject(wallStage, BACK_IMG, optionsX+optionsW-(BACK_IMG.width/2),
-			PAUSE_Y-(BACK_IMG.height/2), 
-			BACK_IMG.width*(SPRITE_SCALE/2),
-			BACK_IMG.height*(SPRITE_SCALE/2));
-		renderObject(wallStage, opsArr[i], tmpX, tmpY, OPS_TARGET_W,
-			OPS_TARGET_H);
+		renderObject(wallStage, BACK_IMG, optionsX+optionsW-(BACK_IMG.scaled_w/2),
+			PAUSE_Y-(BACK_IMG.scaled_h/2));
+		renderObject(wallStage, opsArr[i], tmpX, tmpY);
 		switch (i) {
 			case 0:
 				stagePrint("speed", tmpX+opsPad, tmpY+OPS_TARGET_H, wallStage, "#fff", "24px StarPerv");
@@ -2235,8 +2268,14 @@ function renderPauseScreen() {
 
 //Abstract the details of drawing to support multiple platoforms.
 //Today, only rendering on HTML5 cavas is supported, but not for long
-function renderObject(stage, img, x, y, w, h) {
-	stage.drawImage(img,x,y, w, h);
+function renderObject(stage, sprite, x, y, scale) {
+	var sx = sprite.sx + sprite.w*sprite.current;
+	var sw = (scale) ? sprite.w * scale : sprite.scaled_w;
+	var sh = (scale) ? sprite.h * scale : sprite.scaled_h;
+	stage.drawImage(sprite.img, 
+			sx, sprite.sy, sprite.w, sprite.h,
+			x, y, sw, sh);
+	sprite.current = (sprite.current + 1 ) % sprite.total_frames;
 }
 
 /*
@@ -2247,12 +2286,8 @@ function renderMazeObject($obj, stage) {
 	var xy=maze.grid2canvas($obj.r, $obj.c);
     var x = xy.x+$obj.xOffset;
     var y = xy.y+$obj.yOffset;
-//    if (ISOMETRIC) {
-//	    x=getScreenX(x,y)+$obj.xOffset;
-//	    y=getScreenY(x,y)+$obj.yOffset;
-//    }
 	try {
-		renderObject(stage, $obj.img,x,y, $obj.img.width*SPRITE_SCALE, $obj.img.height*SPRITE_SCALE);
+		renderObject(stage, $obj.img,x,y);
 		if ($obj.obj_type && $obj.obj_type == TYPES.GOAL && DEBUG) {
 			stagePrint($obj.destination, xy.x+Math.floor(GRID_W/2), xy.y, stage, "#000", "12px sans-serif");
 		}
@@ -2262,17 +2297,465 @@ function renderMazeObject($obj, stage) {
 	}
 }
 
-/* Only used in Isometric mode */
-// function getScreenX($x,$y) {
-// 	var x=(($x-$y)*COS)+X_ORIGIN;
-// 	//var x=(($x-$y)*COS);
-// 	return x;
-// }
-// 
-// function getScreenY($x,$y) {
-// 	var y=Y_ORIGIN-(($x+$y)*SIN);
-// 	//var y=(($x+$y)*SIN);
-// 	return y;
-// }
-
 //Main functions held in respective pages.
+
+//maps sprites to the images in which they are held.
+var SPRITE_MAP = {
+"Goal_all" : {"type": SS_TYPES.ANIMATION,
+				"total_frames": 3,
+				"w" : 33,
+				"h" : 38
+				},
+"pdm_static_ss": {
+		"type" : SS_TYPES.STATIC,
+		"sprites": {
+
+"Body_DownToLeft.png":
+{
+	"frame": {"x":2,"y":2,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_DownToRight.png":
+{
+	"frame": {"x":36,"y":2,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_DownToUp.png":
+{
+	"frame": {"x":70,"y":2,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_LeftToDown.png":
+{
+	"frame": {"x":2,"y":20,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_LeftToRight.png":
+{
+	"frame": {"x":36,"y":20,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_LeftToUp.png":
+{
+	"frame": {"x":70,"y":20,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_RightToDown.png":
+{
+	"frame": {"x":2,"y":38,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_RightToLeft.png":
+{
+	"frame": {"x":36,"y":38,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_RightToUp.png":
+{
+	"frame": {"x":70,"y":38,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_UpToDown.png":
+{
+	"frame": {"x":2,"y":56,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_UpToLeft.png":
+{
+	"frame": {"x":36,"y":56,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Body_UpToRight.png":
+{
+	"frame": {"x":70,"y":56,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Goal_1.png":
+{
+	"frame": {"x":2,"y":74,"w":33,"h":38},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":33,"h":38},
+	"sourceSize": {"w":33,"h":38}
+},
+"Head_Down.png":
+{
+	"frame": {"x":37,"y":74,"w":32,"h":32},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+	"sourceSize": {"w":32,"h":32}
+},
+"Head_Left.png":
+{
+	"frame": {"x":71,"y":74,"w":32,"h":32},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+	"sourceSize": {"w":32,"h":32}
+},
+"Head_Right.png":
+{
+	"frame": {"x":2,"y":114,"w":32,"h":32},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+	"sourceSize": {"w":32,"h":32}
+},
+"Head_Up.png":
+{
+	"frame": {"x":36,"y":114,"w":32,"h":32},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+	"sourceSize": {"w":32,"h":32}
+},
+"Panda.png":
+{
+	"frame": {"x":70,"y":114,"w":24,"h":25},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":24,"h":25},
+	"sourceSize": {"w":24,"h":25}
+},
+"Tail_Down.png":
+{
+	"frame": {"x":2,"y":148,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Tail_Left.png":
+{
+	"frame": {"x":36,"y":148,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Tail_Right.png":
+{
+	"frame": {"x":70,"y":148,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+},
+"Tail_Up.png":
+{
+	"frame": {"x":2,"y":166,"w":32,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+	"sourceSize": {"w":32,"h":16}
+}}},
+
+"options_map_ss" : {
+	"type" : SS_TYPES.STATIC,
+	"sprites" :
+		{"backIcon.png":
+		 {
+			"scale" : 1,
+			"frame": {"x":2,"y":2,"w":64,"h":56},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":64,"h":56},
+			"sourceSize": {"w":64,"h":56}
+		},
+		"mapIcon.png":
+		{
+			"scale" : 1,
+			"frame": {"x":68,"y":2,"w":64,"h":56},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":64,"h":56},
+			"sourceSize": {"w":64,"h":56}
+		},
+		"map_complete_128x128.png":
+		{
+			"scale" : 1,
+			"frame": {"x":134,"y":2,"w":128,"h":128},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
+			"sourceSize": {"w":128,"h":128}
+		},
+		"map_crown_128x128.png":
+		{
+			"scale" : 1,
+			"frame": {"x":264,"y":2,"w":128,"h":128},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
+			"sourceSize": {"w":128,"h":128}
+		},
+		"map_dragon_128x128.png":
+		{
+			"scale" : 1,
+			"frame": {"x":2,"y":132,"w":128,"h":128},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":128,"h":128},
+			"sourceSize": {"w":128,"h":128}
+		},
+		"options_fx_off_white.png":
+		{
+			"scale" : 1,
+			"frame": {"x":132,"y":132,"w":120,"h":105},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":120,"h":105},
+			"sourceSize": {"w":120,"h":105}
+		},
+		"options_fx_on_white.png":
+		{
+			"scale" : 1,
+			"frame": {"x":254,"y":132,"w":120,"h":105},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":120,"h":105},
+			"sourceSize": {"w":120,"h":105}
+		},
+		"options_home_white.png":
+		{
+			"scale" : 1,
+			"frame": {"x":376,"y":132,"w":120,"h":105},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":120,"h":105},
+			"sourceSize": {"w":120,"h":105}
+		},
+		"options_sound_off_white.png":
+		{
+			"scale" : 1,
+			"frame": {"x":2,"y":262,"w":120,"h":105},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":120,"h":105},
+			"sourceSize": {"w":120,"h":105}
+		},
+		"options_sound_on_white.png":
+		{
+			"scale" : 1,
+			"frame": {"x":124,"y":262,"w":120,"h":105},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":120,"h":105},
+			"sourceSize": {"w":120,"h":105}
+		},
+		"options_speed_fast_white.png":
+		{
+			"scale" : 1,
+			"frame": {"x":246,"y":262,"w":120,"h":105},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":120,"h":105},
+			"sourceSize": {"w":120,"h":105}
+		},
+		"options_speed_slow_white.png":
+		{
+			"scale" : 1,
+			"frame": {"x":368,"y":262,"w":120,"h":105},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":120,"h":105},
+			"sourceSize": {"w":120,"h":105}
+		},
+		"pauseIcon.png":
+		{
+			"scale" : 1,
+			"frame": {"x":2,"y":369,"w":64,"h":56},
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": {"x":0,"y":0,"w":64,"h":56},
+			"sourceSize": {"w":64,"h":56}
+		}}},
+
+
+"wall_tiles_ss" : {
+		"type" : SS_TYPES.STATIC,
+		"sprites" : {
+
+			"tiles.png":
+			{
+				"frame": {"x":2,"y":2,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"tiles_2.png":
+			{
+				"frame": {"x":36,"y":2,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"tiles_3.png":
+			{
+				"frame": {"x":70,"y":2,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"tiles_4.png":
+			{
+				"frame": {"x":2,"y":20,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"wall_9slice_bc.png":
+			{
+				"frame": {"x":36,"y":20,"w":32,"h":26},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":26},
+				"sourceSize": {"w":32,"h":26}
+			},
+			"wall_9slice_bl.png":
+			{
+				"frame": {"x":70,"y":20,"w":32,"h":26},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":26},
+				"sourceSize": {"w":32,"h":26}
+			},
+			"wall_9slice_bm.png":
+			{
+				"frame": {"x":36,"y":20,"w":32,"h":26},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":26},
+				"sourceSize": {"w":32,"h":26}
+			},
+			"wall_9slice_br.png":
+			{
+				"frame": {"x":2,"y":48,"w":32,"h":26},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":26},
+				"sourceSize": {"w":32,"h":26}
+			},
+			"wall_9slice_mc.png":
+			{
+				"frame": {"x":36,"y":48,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"wall_9slice_ml.png":
+			{
+				"frame": {"x":70,"y":48,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"wall_9slice_mr.png":
+			{
+				"frame": {"x":2,"y":76,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"wall_9slice_tc.png":
+			{
+				"frame": {"x":36,"y":76,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"wall_9slice_tl.png":
+			{
+				"frame": {"x":70,"y":76,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"wall_9slice_tr.png":
+			{
+				"frame": {"x":2,"y":94,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"wall_block.png":
+			{
+				"frame": {"x":36,"y":94,"w":32,"h":26},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":26},
+				"sourceSize": {"w":32,"h":26}
+			},
+			"wall_block_center.png":
+			{
+				"frame": {"x":70,"y":94,"w":32,"h":26},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":26},
+				"sourceSize": {"w":32,"h":26}
+			},
+			"wall_stright_horizontal.png":
+			{
+				"frame": {"x":2,"y":122,"w":32,"h":22},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":22},
+				"sourceSize": {"w":32,"h":22}
+			},
+			"wall_stright_vertical.png":
+			{
+				"frame": {"x":36,"y":122,"w":32,"h":23},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":23},
+				"sourceSize": {"w":32,"h":23}
+			}}}
+
+};
