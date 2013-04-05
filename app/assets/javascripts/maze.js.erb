@@ -9,6 +9,7 @@ var pdm = {};
 pdm.state = {};
 
 /* Graphics */
+var FRAMERATE = 1000/80;
 var SPRITE_SCALE = 2;
 var BASE_W = 32;
 var BASE_H= 16;
@@ -108,6 +109,8 @@ var AUDIODIR ="assets"
 var LOAD_ASSETS = true;
 var INIT_GAME = true;
 
+var DEFAULT_LIVES = 1;
+
 
 /* Maze encoding variables */
 var ENC_W = 2; //num of digits per point in a string
@@ -130,6 +133,7 @@ var UP_ARROW=38;
 var RIGHT_ARROW=39;
 var DOWN_ARROW=40;
 var ESC=27;
+var ENTER =13;
 var MOVE_DELAY=10;
 
 /* Game */
@@ -147,7 +151,8 @@ var GAME_STATES = {
   PLAYING: "playing",
   COMPLETE: "Maze complete!",
   PAUSED: "Paused",
-  GAME_COMPLETE: "Game complete!"
+  GAME_COMPLETE: "Game complete!",
+  GAME_OVER: "Game over"
 }
 
 /* Game elements */
@@ -953,7 +958,6 @@ Maze.prototype.addDragonBody = function(dir, lastDir, oldR, oldC) {
 /*************************************/
 
 function cleanUp() {
-    printState();
     stopGameLoop();
 }
 
@@ -962,14 +966,49 @@ function mazeCollision() {
     stopMusic();
     playMultiSound('defeat');
     LEVEL_SCORE = 0;
+	pdm.state.lives -=1;
+	pdm.state.deaths+=1;
     cleanUp();
+	if (pdm.state.lives <= 0) {
+		game_over();
+	}
+}
+
+function game_over() {
+	game_state = GAME_STATES.GAME_OVER;
+  	mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
+  	wallStage.clearRect(0,0,wallStage.canvas.width, wallStage.canvas.height);
+  	tileStage.clearRect(0,0,tileStage.canvas.width, tileStage.canvas.height);
+
+	var cL = vL = tL=0;
+	for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
+		tL +=1;
+		if (pdm.state.map.levels[level].visited) { vL +=1; }
+		if (pdm.state.map.levels[level].completed) { cL +=1; }
+	}
+
+	stagePrint("Game over!", 250, 200, mapStage, undefined, "24px StarPerv");
+	stagePrint("Pandas: ", 100, 250, mapStage);
+	stagePrint(pdm.state.totalScore, 400, 250, mapStage, "#CC3300");
+	stagePrint("Deaths: ", 100, 275, mapStage);
+	stagePrint(pdm.state.deaths, 400, 275, mapStage, "#CC3300");
+	stagePrint("Completed levels: ", 100, 300, mapStage);
+	stagePrint(cL +"/"+tL, 400, 300, mapStage, "#CC3300");
+	stagePrint("Your rank: ", 100,325,mapStage);
+	stagePrint(getRank(pdm.state.totalScore, pdm.state.totalDeaths, cL, vL),400, 325, mapStage, "#CC3300");
+	stagePrint("Press enter to retrun to main screen", 200,375,mapStage, undefined, "12px StarPerv");
+	deleteSavedGame();
+}
+
+function getRank(score, deaths, completed, visited) {
+	return "Demure lizard";
 }
 
 function mazeComplete(dest) {
 	return function () {
  	    game_state = GAME_STATES.COMPLETE;
-	    stopMusic();
-	    playMultiSound('victory');
+	    //stopMusic();
+	    //playMultiSound('victory');
 	    maze.complete();
 	    pdm.state.totalScore += LEVEL_SCORE;
 	    LEVEL_SCORE = 0;
@@ -1177,6 +1216,8 @@ function initGameState() {
 	} else {
 		pdm.state.currentLevel = 0;
 		pdm.state.totalScore =0;
+		pdm.state.lives= DEFAULT_LIVES;
+		pdm.state.deaths= 0;
 		pdm.state.difficulty = DIFFICULTIES.NORMAL;
 		return false;
 	}
@@ -1609,7 +1650,6 @@ function maze_init(){
 	}
 
 	game_state = GAME_STATES.READY;
-    printState();
 	var rc = (maze.getEntry()) ? maze.getEntry(): maze.getStart();
 	dragon = new Point(HEAD_DOWN_IMG, rc.r, rc.c, function () {});
 	setHeadImg(dragon, pdm.state.exitdir);
@@ -1780,6 +1820,7 @@ function toggleOptions() {
 		// }
 		// renderOptions(mapStage);
 			
+		//Render levels
 		for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
 			var x = pdm.state.map.gridW*(level%pdm.state.map.cols);
 			var y = pdm.state.map.gridH*Math.floor(level/pdm.state.map.cols) + OPTIONS_BAR_HEIGHT;
@@ -1796,6 +1837,7 @@ function toggleOptions() {
 				mapStage.drawImage(pdm.state.map.completeImg, x, y);
 			}
 		}
+
 	}
 }
 
@@ -1941,6 +1983,16 @@ function onKeyDown(evt){
 					//Do nothing
 			}
 			break;
+		case GAME_STATES.GAME_OVER:
+			switch(evt.keyCode) {
+				case ENTER:
+					window.location="/";
+					break;
+
+				default:
+					break;
+			}
+			break;
 		default:
 			switch(evt.keyCode) {
 				case LEFT_ARROW:
@@ -2008,7 +2060,7 @@ function gameLoop() {
 	if (request) {
 		stopGameLoop();
 	}
-    request = window.setTimeout(gameLoop, 1000 / 60);
+    request = window.setTimeout(gameLoop, FRAMERATE);
 	update();
 }
 
@@ -2059,7 +2111,7 @@ function pauseOutLoop() {
 	renderPauseScreen();
 	pauseInPlace = (PAUSE_Y <= -103*SPRITE_SCALE);
 	ctrlHidden = ANIM_OFFSET<=0;
-    request = window.setTimeout(pauseOutLoop, 1000 / 60);
+    request = window.setTimeout(pauseOutLoop, FRAMERATE);
 
 }
 
@@ -2084,7 +2136,7 @@ function pauseInLoop() {
 	
 	pauseInPlace = (PAUSE_Y >= 4*GRID_H);
 	ctrlHidden = ANIM_OFFSET>GRID_W*3;
-    request = window.setTimeout(pauseInLoop, 1000 / 60);
+    request = window.setTimeout(pauseInLoop, FRAMERATE);
 }
 
 function update() {
@@ -2190,9 +2242,9 @@ function updateScore(p) {
 }
 
 //Prints the game state string in the center of the maze
-function printState () {
-	//gameStage.drawTextCenter("sans", 16, maze.getCenterX(), maze.getCenterY(), game_state); 
-}
+//function printState () {
+//	//gameStage.drawTextCenter("sans", 16, maze.getCenterX(), maze.getCenterY(), game_state); 
+//}
 
 //Prints text at x and y on the given stage
 function stagePrint(text, x, y, stage, fill, font) {
