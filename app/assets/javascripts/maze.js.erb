@@ -109,7 +109,7 @@ var AUDIODIR ="assets"
 var LOAD_ASSETS = true;
 var INIT_GAME = true;
 
-var DEFAULT_LIVES = 1;
+var DEFAULT_LIVES = 10;
 
 
 /* Maze encoding variables */
@@ -135,6 +135,13 @@ var DOWN_ARROW=40;
 var ESC=27;
 var ENTER =13;
 var MOVE_DELAY=10;
+
+var OPPOSITEDIR = {
+	"up" : "down",
+	"down" : "up",
+	"left" : "right",
+	"right" :  "left"
+}
 
 /* Game */
 pdm.state.map = undefined; // holds the current world.
@@ -427,10 +434,12 @@ Maze.prototype.complete = function () {
    if (this.gotBonuses==this.maxPandas) {
 		pdm.state.map.levels[pdm.state.currentLevel].completed = true;
 		pdm.state.map.levels[pdm.state.currentLevel].currentMazeStr = this.toString();
-	} 
-	if (pdm.state.difficulty == DIFFICULTIES.EASY) {
+	    pdm.state.totalScore += LEVEL_SCORE;
+	} else if (pdm.state.difficulty == DIFFICULTIES.EASY) {
 		//Allow saving of partial states if not on hard.
 		pdm.state.map.levels[pdm.state.currentLevel].currentMazeStr = this.toString();
+		//Count additional pandas in this case.
+	    pdm.state.totalScore += LEVEL_SCORE;
 	}
 	setHeadImg(maze.getPoint(dragon.r, dragon.c), dir);
 	pdm.state.exitr = dragon.r;
@@ -976,28 +985,54 @@ function mazeCollision() {
 
 function game_over() {
 	game_state = GAME_STATES.GAME_OVER;
+	renderWrapUp(wallStage, 200,125);
+}
+
+function renderWrapUp(stage, xOff, yOff) {
+	/*
   	mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
   	wallStage.clearRect(0,0,wallStage.canvas.width, wallStage.canvas.height);
   	tileStage.clearRect(0,0,tileStage.canvas.width, tileStage.canvas.height);
+	*/
+	var cL = vL = tL = 0;
 
-	var cL = vL = tL=0;
+	var lh = 13*SPRITE_SCALE;  //line height
+	var tab = 25*SPRITE_SCALE; //tab width
+	var p = 10*SPRITE_SCALE; // padding width
+
+	//Lines
+	var hl = yOff +lh;
+	var l1 = hl+2*lh;
+	var l2 = l1 +lh;
+	var l3 = l2+lh;
+	var l4 = l3+lh;
+	var ft = l4+2*lh;
+
+	//columns
+	var col1 = xOff + p;
+	var col2 = xOff + p + 6*tab;
+
+	roundRect(stage, xOff, yOff,
+        optionsW, optionsH+50, 10*SPRITE_SCALE,
+        "rgba(0,0,0, 0.8)", false);
+
 	for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
 		tL +=1;
 		if (pdm.state.map.levels[level].visited) { vL +=1; }
 		if (pdm.state.map.levels[level].completed) { cL +=1; }
 	}
-
-	stagePrint("Game over!", 250, 200, mapStage, undefined, "24px StarPerv");
-	stagePrint("Pandas: ", 100, 250, mapStage);
-	stagePrint(pdm.state.totalScore, 400, 250, mapStage, "#CC3300");
-	stagePrint("Deaths: ", 100, 275, mapStage);
-	stagePrint(pdm.state.deaths, 400, 275, mapStage, "#CC3300");
-	stagePrint("Completed levels: ", 100, 300, mapStage);
-	stagePrint(cL +"/"+tL, 400, 300, mapStage, "#CC3300");
-	stagePrint("Your rank: ", 100,325,mapStage);
-	stagePrint(getRank(pdm.state.totalScore, pdm.state.totalDeaths, cL, vL),400, 325, mapStage, "#CC3300");
-	stagePrint("Press enter to retrun to main screen", 200,375,mapStage, undefined, "12px StarPerv");
+	stagePrint("Game over!", col1+3*tab, hl, stage, "#ffffff", "24px StarPerv");
+	stagePrint("Pandas: ", col1, l1, stage, "#ffffff");
+	stagePrint(pdm.state.totalScore, col2, l1, stage, "#CC3300");
+	stagePrint("Deaths: ", col1, l2, stage, "#ffffff");
+	stagePrint(pdm.state.deaths, col2, l2, stage, "#CC3300");
+	stagePrint("Completed levels: ", col1, l3, stage, "#ffffff");
+	stagePrint(cL +"/"+tL, col2, l3, stage, "#CC3300");
+	stagePrint("Your rank: ", col1,l4,stage, "#ffffff");
+	stagePrint(getRank(pdm.state.totalScore, pdm.state.totalDeaths, cL, vL), col2, l4, stage, "#CC3300");
+	stagePrint("Press enter to retrun to main screen", col1+tab ,ft,stage,"#ffffff" , "12px StarPerv");
 	deleteSavedGame();
+	
 }
 
 function getRank(score, deaths, completed, visited) {
@@ -1010,7 +1045,6 @@ function mazeComplete(dest) {
 	    //stopMusic();
 	    //playMultiSound('victory');
 	    maze.complete();
-	    pdm.state.totalScore += LEVEL_SCORE;
 	    LEVEL_SCORE = 0;
 	    pdm.state.currentLevel = dest;
 	    saveGameState();
@@ -1554,6 +1588,7 @@ function pauseClick(e, evt) {
 
 function gameClick(e, evt) {
 		var e = (evt) ? evt : e; 
+		if (game_state == GAME_STATES.GAME_OVER) { return; }
         //See if you clicked an option and, if so, call the option fn.
         var pos = findPos(this);
         var x = e.pageX - pos.x - maze.xOffset;
@@ -1939,7 +1974,7 @@ function onKeyDown(evt){
 		case GAME_STATES.PAUSED:
 			switch(evt.keyCode) {
 				case ESC:
-					toggleOptions();
+					togglePauseScreen();
 					break;
 				default:
 					//Do nothing
@@ -1977,11 +2012,15 @@ function onKeyDown(evt){
 					nextDir = "up";
 					break;
 				case ESC:
-					toggleOptions();
+					togglePauseScreen();
 					break;
 				default:
 					//Do nothing
 			}
+			//don't all yourself to turn back on yourself unless you've just entered a maze
+			nextDir = (OPPOSITEDIR[nextDir] == dir && 
+						(dragon.r != maze.er &&
+						 dragon.c != maze.ec)) ? dir : nextDir;
 			break;
 		case GAME_STATES.GAME_OVER:
 			switch(evt.keyCode) {
@@ -2082,6 +2121,7 @@ function resetAnimVals() {
 
 function togglePauseScreen() {
 		if (game_state == GAME_STATES.PAUSED) {
+			window.clearTimeout(request);
 			ctrlHidden = false;
 			pauseInPlace = false;
 			pauseOutLoop();
@@ -2135,7 +2175,7 @@ function pauseInLoop() {
 	//render options images and circle
 	
 	pauseInPlace = (PAUSE_Y >= 4*GRID_H);
-	ctrlHidden = ANIM_OFFSET>GRID_W*3;
+	ctrlHidden = ANIM_OFFSET>GRID_W*5;
     request = window.setTimeout(pauseInLoop, FRAMERATE);
 }
 
@@ -2262,41 +2302,70 @@ function stagePrint(text, x, y, stage, fill, font) {
 
 
 //renders the screen
-function renderScreen(offset) {
-	var offset = (offset) ? offset : 0;
+function renderScreen(xOff, yOff) {
+	xOff = (xOff) ? xOff : 0;
+	yOff = (yOff) ? yOff : 0;
     wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
     maze.render(wallStage);
-	renderControls(wallStage, offset);
+	renderControls(wallStage, xOff, yOff);
 }
 
-function renderControls(stage, offset) {
-	var offset = (offset) ? offset : 0;
+function renderControls(stage, xOff, yOff) {
+	xOff = (xOff) ? xOff : 0;
+	yOff = (yOff) ? yOff : 0;
+
+	/* Begin left-side controls */
+
+	var hpb = 10*SPRITE_SCALE; //horizontal padding between ctrl boxes
+	var vpb = 6*SPRITE_SCALE+yOff; //vertical padding between ctrl boxes
+	var vpt = 8*SPRITE_SCALE+yOff; //vert pad text;
+	var lcs = hpb - xOff; //left ctrl start
+	var pend = lcs + 80*SPRITE_SCALE; //panda end
+
+	var bh = 12*SPRITE_SCALE;
+	var br = 3*SPRITE_SCALE;
+
+	//Panda box
 	//draw background box
-	roundRect(stage, 10*SPRITE_SCALE-offset, 6*SPRITE_SCALE, 80*SPRITE_SCALE, 12*SPRITE_SCALE, 3*SPRITE_SCALE, "rgba(0,0,0, 0.8)", false);
+	roundRect(stage, lcs, vpb, 80*SPRITE_SCALE, bh, br, "rgba(0,0,0, 0.8)", false);
 	//render Panda
-	renderObject(stage, PANDA_IMG, 7*SPRITE_SCALE-offset, 3*SPRITE_SCALE, SPRITE_SCALE/2);
+	renderObject(stage, PANDA_IMG, 7*SPRITE_SCALE-xOff, 3*SPRITE_SCALE+yOff, SPRITE_SCALE/2);
 	//render total score
-	stagePrint("x" + pdm.state.totalScore+" + "+LEVEL_SCORE,  23*SPRITE_SCALE-offset, 8*SPRITE_SCALE, stage, "#fff");
+	stagePrint("x" + pdm.state.totalScore+" + "+LEVEL_SCORE,  23*SPRITE_SCALE-xOff, vpt, stage, "#fff");
+
+
+	//Lives box
+	var lives_x= pend+hpb;
+	//draw background box
+	roundRect(stage, lives_x, vpb, 40*SPRITE_SCALE, bh, br, "rgba(0,0,0, 0.8)", false);
+	//render Panda
+	renderObject(stage, HEAD_DOWN_IMG, lives_x-5*SPRITE_SCALE, SPRITE_SCALE+yOff, SPRITE_SCALE/2);
+	//render total score
+	stagePrint("x" + pdm.state.lives,  lives_x+14*SPRITE_SCALE, vpt, stage, "#fff");
+
+	/* render right-side controls */
 	//render mapicon
 	var xy = maze.grid2canvas(1, MAP_ICON_POS);
-	renderObject(stage, MAP_ICON, xy.x+offset, 0);
+	renderObject(stage, MAP_ICON, xy.x+xOff, 0+yOff);
 
 	//render pause 
 	xy = maze.grid2canvas(1, PAUSE_ICON_POS);
-	renderObject(stage, PAUSE_ICON, xy.x+offset, 0);
+	renderObject(stage, PAUSE_ICON, xy.x+xOff, 0+yOff);
 }
 
 //Renders the pause screen
-function renderPauseScreen() {
+function renderPauseScreen(xOff, yOff) {
+	xOff = (xOff) ? xOff : 0;
+	yOff = (yOff) ? yOff : PAUSE_Y;
 	var opsArr = [OPS_SPEED_IMG, OPS_FX_IMG, OPS_SOUND_IMG, OPS_HOME_IMG];
 	roundRect(wallStage, optionsX, PAUSE_Y, 
 		optionsW, optionsH, 10*SPRITE_SCALE, 
 		"rgba(0,0,0, 0.8)", false);
 	for (var i=0; i < opsArr.length; i++) {
 		var tmpX = optionsX+opsPad+OPS_TARGET_W*i+opsPad*i;
-		var tmpY = PAUSE_Y+GRID_H+opsPad;
+		var tmpY = yOff+GRID_H+opsPad;
 		renderObject(wallStage, BACK_IMG, optionsX+optionsW-(BACK_IMG.scaled_w/2),
-			PAUSE_Y-(BACK_IMG.scaled_h/2));
+			yOff-(BACK_IMG.scaled_h/2));
 		renderObject(wallStage, opsArr[i], tmpX, tmpY);
 		switch (i) {
 			case 0:

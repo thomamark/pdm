@@ -73,14 +73,13 @@
 
 <script type="text/javascript">
   var ENTER_KEY = 13;
-/*
   function onKeyDown($evt) {
     $evt.preventDefault();
     if ($evt.keyCode==ENTER_KEY) {
       window.location = "/play";
     }
   }
-
+/*
   function blinker() {
        $('#enterText').toggle(); 
        window.setTimeout(blinker, 50000/60);
@@ -88,7 +87,7 @@
 */
 
   $('document').ready( function() {
-      //window.onkeydown = onKeyDown;
+      window.onkeydown = onKeyDown;
       //window.setTimeout(blinker, 50000 / 60);
   	if ( pdm.hasSavedGame()){
 		//We found a saved game
