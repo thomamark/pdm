@@ -1206,7 +1206,7 @@ function findPos(obj) {
 /*************************************/
 
 function init(fn) { 
-    POST_ASSET_LOAD_FN = (fn) ? fn : postAssetLoad;
+    POST_ASSET_LOAD_FN = (fn) ? fn : undefined;
 
     //Short-circuit if we don't want to load assets.
     if (!LOAD_ASSETS) { return;}
@@ -1359,15 +1359,16 @@ function loadAssets() {
 		WALL_TILES_SS_IMG = createImgAsset('wall_tiles_ss', "<%= asset_path('pdm_walls_tiles.png') %>");
 		OPTIONS_SS_IMG = createImgAsset('options_map_ss', "<%= asset_path('pdm_options_map.png') %>");
 		GOAL_SS_IMG = createImgAsset('Goal_all', "<%= asset_path('Goal_all.png') %>");
+		LB_SS_IMG = createImgAsset('lb_ss', "<%= asset_path('lb_ss.png') %>"); // only used in level builder
 
 		/* one-off images (not in sprite sheet) */
 		MAP_IMG = createImgAsset('map', "<%= asset_path('map.png') %>");
 		MAP_HEADER_BG = createImgAsset('map_header_bg', "<%= asset_path('optionsHeaderBg.png') %>");
 
 		//Only used in level builder
-      	DELETE_IMG = createImgAsset("delete", 
-            "<%= asset_path('delete.png') %>");
-		PIX_IMG = createImgAsset('pix_1x1', "<%= asset_path('1x1.gif') %>");
+//      	DELETE_IMG = createImgAsset("delete", 
+//            "<%= asset_path('delete.png') %>");
+//		PIX_IMG = createImgAsset('pix_1x1', "<%= asset_path('1x1.gif') %>");
 }
 
 function postAssetLoad() {
@@ -1414,6 +1415,10 @@ function postAssetLoad() {
 	MAP_ICON = SPRITES['mapIcon.png'];
 	PAUSE_ICON = SPRITES['pauseIcon.png'];
 	BACK_IMG = SPRITES['backIcon.png'];
+
+	//level builder sprites
+	DELETE_IMG = SPRITES['delete.png'];
+	PIX_IMG = SPRITES['1x1.gif'];
 
 	// Options panel images
 	OPS_HOME_IMG = SPRITES['options_home_white.png'];
@@ -1476,6 +1481,7 @@ function createImgAsset($id,$src) {
 
 function Sprite (img, sx, sy, w, h, scale, total_frames) {
 	this.img = img;
+	this.src = img.src;
 	this.pdmId = img.pdmId;
 	this.sx = sx;
 	this.sy = sy;
@@ -1529,6 +1535,7 @@ function onAssetLoaded(asset_id, img) {
 	for(flag in loadFlags) {
 		if(!loadFlags[flag]) {return;}
 	}
+	postAssetLoad();
     if (POST_ASSET_LOAD_FN) {POST_ASSET_LOAD_FN();}
     //Only continue if we want to continue the game
     if (!INIT_GAME) { return;}
@@ -2409,7 +2416,7 @@ function renderMazeObject($obj, stage) {
     var y = xy.y+$obj.yOffset;
 	try {
 		renderObject(stage, $obj.img,x,y);
-		if ($obj.obj_type && $obj.obj_type == TYPES.GOAL && DEBUG) {
+		if (DEBUG && $obj.obj_type && $obj.obj_type == TYPES.GOAL) {
 			stagePrint($obj.destination, xy.x+Math.floor(GRID_W/2), xy.y, stage, "#000", "12px sans-serif");
 		}
 	} catch($error) {
@@ -2877,6 +2884,26 @@ var SPRITE_MAP = {
 				"trimmed": false,
 				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":23},
 				"sourceSize": {"w":32,"h":23}
-			}}}
+			}}},
 
+		"lb_ss" : {
+				"type" : SS_TYPES.STATIC,
+				"sprites" : {
+					"1x1.gif":
+					{
+						"frame": {"x":2,"y":2,"w":2,"h":2},
+						"rotated": false,
+						"trimmed": false,
+						"spriteSourceSize": {"x":0,"y":0,"w":2,"h":2},
+						"sourceSize": {"w":2,"h":2}
+					},
+					"delete.png":
+					{
+						"frame": {"x":6,"y":2,"w":30,"h":30},
+						"rotated": false,
+						"trimmed": false,
+						"spriteSourceSize": {"x":0,"y":0,"w":30,"h":30},
+						"sourceSize": {"w":30,"h":30}
+					}},
+				}
 };

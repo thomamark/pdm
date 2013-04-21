@@ -337,7 +337,18 @@
 			    maze.render(bgStage);
 				$('li').each( function (i, el) {
 					$(el).click(select);
-					$(el).prepend("<img src='"+IMGS[el.id].src+"' />");
+					var s = IMGS[el.id];
+					var sx = (s.sx) ? -s.sx : 0;
+					var sy = (s.sy) ? -s.sy : 0;
+					var w = (s.w) ? s.w : s.width;
+					var h = (s.h) ? s.h : s.height;
+
+					$(el).prepend("<img style='background-image: url(\""+s.src+"\");"+
+							"background-position : " +sx+"px "+sy+"px; "+
+							"background-repeat: no-repeat; " +
+							"width: "+w+"px; height:"+h+"px;' "+ 
+							"border-style: 0px;"+
+							" />");
 				});
 	          });
 			});
