@@ -19,7 +19,11 @@
                 var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
               })();
             
-            </script>
+			  /* Risk and fraud detection */
+			  var _user_id = "$ip"; // IMPORTANT! Set to the user's account name, or "$ip" if unknown
+			
+			  var _sift = _sift || []; _sift.push(['_setAccount', 'c6010c8927']); _sift.push(['_setUserId', _user_id]); _sift.push(['_trackPageview']); (function() { function ls() { var e = document.createElement('script'); e.type = 'text/javascript'; e.async = true; e.src = ('https:' == document.location.protocol ? 'https://' : 'http://') + 'dtlilztwypawv.cloudfront.net/s.js'; var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(e, s); } if (window.attachEvent) { window.attachEvent('onload', ls); } else { window.addEventListener('load', ls, false); }})();
+  </script>
 </head>
 <body>
 
