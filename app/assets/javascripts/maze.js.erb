@@ -1685,17 +1685,12 @@ function initUi() {
     $("#maze-canvas-background").click(gameClick);
 	$("#map-canvas").click(mapClick);
     
-
-    if (is_touch_device()) {
-        var JOYSTICK = new VirtualJoystick({
-           container   : document.getElementById('maze-canvas'),
-           //mouseSupport  : true
+    //if (is_touch_device()) {
+        JOYSTICK = new VirtualJoystick({
+           //container   : document.getElementById('map-canvas'),
+           mouseSupport  : true
            });
-    }
-
-	document.body.addEventListener('touchmove', function(event) {
-		  event.preventDefault();
-		}, false); 
+    //}
     
 }
 
@@ -2009,11 +2004,34 @@ function init_levels() {
 /* I/O functions                     */
 /*************************************/
 
+function onTouchMove(evt) {
+	evt.preventDefault();
+	var jdir;
+	if (JOYSTICK) {
+		if (JOYSTICK.down()) { jdir = DOWN_ARROW;}
+		else if (JOYSTICK.up()) { jdir = UP_ARROW;}
+		else if (JOYSTICK.left()) { jdir = LEFT_ARROW;}
+		else if (JOYSTICK.right()) { jdir = RIGHT_ARROW;}
+	}
+	procInput(jdir);
+}
+
+function onTouchEnd(evt) {
+	evt.preventDefault();
+	if (game_state == GAME_STATES.GAME_OVER) {
+		procInput(ENTER);
+	}
+}
+
 function onKeyDown(evt){
 	evt.preventDefault();
+	procInput(evt.keyCode);
+}
+
+function procInput(action) {
 	switch(game_state) {
 		case GAME_STATES.PAUSED:
-			switch(evt.keyCode) {
+			switch(action) {
 				case ESC:
 					togglePauseScreen();
 					break;
@@ -2022,7 +2040,7 @@ function onKeyDown(evt){
 			}
 			break;
 		case GAME_STATES.READY:
-			switch(evt.keyCode) {
+			switch(action) {
 				case LEFT_ARROW:
 				case RIGHT_ARROW:
 				case DOWN_ARROW:
@@ -2038,7 +2056,7 @@ function onKeyDown(evt){
 					//Do nothing
 			}
 		case GAME_STATES.PLAYING:
-			switch (evt.keyCode) {
+			switch (action) {
 	         	//Store in nextDir to save the last direction
 				case LEFT_ARROW:
 					nextDir = "left";
@@ -2066,7 +2084,7 @@ function onKeyDown(evt){
 		case GAME_STATES.GAME_COMPLETE:
 			//Fall through to GAME_OVER
 		case GAME_STATES.GAME_OVER:
-			switch(evt.keyCode) {
+			switch(action) {
 				case ENTER:
 					cleanUp();
 					window.location="/";
@@ -2076,7 +2094,7 @@ function onKeyDown(evt){
 			}
 			break;
 		default:
-			switch(evt.keyCode) {
+			switch(action) {
 				case LEFT_ARROW:
 				case RIGHT_ARROW:
 				case DOWN_ARROW:
@@ -2134,6 +2152,8 @@ function unpause() {
 
 function startGameLoop() {
 	window.onkeydown=onKeyDown;
+	document.body.addEventListener('touchmove', onTouchMove);
+	document.body.addEventListener('touchend', onTouchEnd);
 	gameLoop();
 }
 
