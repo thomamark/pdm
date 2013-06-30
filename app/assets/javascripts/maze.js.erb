@@ -135,6 +135,9 @@ var DOWN_ARROW=40;
 var ESC=27;
 var ENTER =13;
 var MOVE_DELAY=10;
+var CONTROLS_HIDDEN = false;
+var CONTROL_POS = 10*SPRITE_SCALE; 
+var JOYSTICK;
 
 var OPPOSITEDIR = {
 	"up" : "down",
@@ -986,6 +989,7 @@ function mazeCollision() {
 function game_over() {
 	game_state = GAME_STATES.GAME_OVER;
 	renderWrapUp(wallStage, 200,125);
+	deleteSavedGame();
 }
 
 function renderWrapUp(stage, xOff, yOff) {
@@ -1031,7 +1035,6 @@ function renderWrapUp(stage, xOff, yOff) {
 	stagePrint("Your rank: ", col1,l4,stage, "#ffffff");
 	stagePrint(getRank(pdm.state.totalScore, pdm.state.totalDeaths, cL, vL), col2, l4, stage, "#CC3300");
 	stagePrint("Press enter to retrun to main screen", col1+tab ,ft,stage,"#ffffff" , "12px StarPerv");
-	deleteSavedGame();
 	
 }
 
@@ -1050,6 +1053,10 @@ function mazeComplete(dest) {
 	    saveGameState();
 		renderScreen();
 	    cleanUp();
+        if (dest>=pdm.state.map.levels.length){
+            gameComplete();
+            return;
+        }
 	}
 }
 
@@ -1058,13 +1065,25 @@ function collectBonus() {
     playMultiSound('pick_up');
 }
 
+
 function gameComplete() {
     game_state = GAME_STATES.GAME_COMPLETE;
+	fadeIn(function (alpha) {
+  				mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
+				mapStage.fillStyle = "rgba(255, 255, 255,"+alpha+")";
+				mapStage.fillRect(0,0,MAX_COLS*GRID_W,(MAX_ROWS+1)*GRID_H);
+			},
+			closingSequence);
     pdm.state.currentLevel=0;
+	deleteSavedGame();
     // for (var i=0; i<pdm.state.map.levels.length;i++) {
     //     pdm.state.map.levels[i].initPoints();
     // }
-    cleanUp();
+    //cleanUp();
+}
+
+function closingSequence() {
+	renderWrapUp(mapStage, 200,125);
 }
 
 
@@ -1151,7 +1170,12 @@ function Level (originalMazeStr, specialMapImg, currentMazeStr, completed, visit
 /*************************************/
 /* Utility functions                 */
 /*************************************/
-
+//Detects whether or not this is a touch screen
+// from http://stackoverflow.com/questions/4817029/whats-the-best-way-to-detect-a-touch-screen-device-using-javascript
+function is_touch_device() {
+    return !!('ontouchstart' in window) // works on most browsers 
+        || !!('onmsgesturechange' in window); // works on ie10
+};
 
 function replaceCyclicStructures(key, val) {
 	//Modified version from http://hagsdev.blogspot.com/2012/06/cyclic-objects-and-jsonstringify.html
@@ -1211,8 +1235,6 @@ function init(fn) {
     //Short-circuit if we don't want to load assets.
     if (!LOAD_ASSETS) { return;}
     loadAssets(); 
-
-
 }
 
 // Returns true if you can save games
@@ -1662,19 +1684,31 @@ function initUi() {
 
     $("#maze-canvas-background").click(gameClick);
 	$("#map-canvas").click(mapClick);
+    
+
+    if (is_touch_device()) {
+        var JOYSTICK = new VirtualJoystick({
+           container   : document.getElementById('maze-canvas'),
+           //mouseSupport  : true
+           });
+    }
+
+	document.body.addEventListener('touchmove', function(event) {
+		  event.preventDefault();
+		}, false); 
+    
 }
 
 
 function maze_init(){
     if(game_state == GAME_STATES.COMPLETE) {
-		tileStage.clearRect(0,0,wallCanvas.width,wallCanvas.height);
-		pdm.state.exitr = dragon.r;
-		pdm.state.exitc = dragon.c;
         if (pdm.state.currentLevel>=pdm.state.map.levels.length){
             gameComplete();
             return;
         }
-
+		pdm.state.exitr = dragon.r;
+		pdm.state.exitc = dragon.c;
+		tileStage.clearRect(0,0,wallCanvas.width,wallCanvas.height);
     } 
 
     if (game_state != GAME_STATES.FAILED) {
@@ -2029,12 +2063,14 @@ function onKeyDown(evt){
 						(dragon.r != maze.er &&
 						 dragon.c != maze.ec)) ? dir : nextDir;
 			break;
+		case GAME_STATES.GAME_COMPLETE:
+			//Fall through to GAME_OVER
 		case GAME_STATES.GAME_OVER:
 			switch(evt.keyCode) {
 				case ENTER:
+					cleanUp();
 					window.location="/";
 					break;
-
 				default:
 					break;
 			}
@@ -2159,7 +2195,6 @@ function pauseOutLoop() {
 	pauseInPlace = (PAUSE_Y <= -103*SPRITE_SCALE);
 	ctrlHidden = ANIM_OFFSET<=0;
     request = window.setTimeout(pauseOutLoop, FRAMERATE);
-
 }
 
 function pauseInLoop() {
@@ -2174,13 +2209,9 @@ function pauseInLoop() {
 	if (ctrlHidden && !pauseInPlace) {
 		PAUSE_Y += 10*SPRITE_SCALE;
 	}
-
 	renderScreen(ANIM_OFFSET); 
 	renderPauseScreen();
-	
-	
 	//render options images and circle
-	
 	pauseInPlace = (PAUSE_Y >= 4*GRID_H);
 	ctrlHidden = ANIM_OFFSET>GRID_W*5;
     request = window.setTimeout(pauseInLoop, FRAMERATE);
@@ -2314,7 +2345,9 @@ function renderScreen(xOff, yOff) {
 	yOff = (yOff) ? yOff : 0;
     wallStage.clearRect(0,0, wallCanvas.width, wallCanvas.height);
     maze.render(wallStage);
-	renderControls(wallStage, xOff, yOff);
+	if (!CONTROLS_HIDDEN) {
+		renderControls(wallStage, xOff, yOff);
+	}
 }
 
 function renderControls(stage, xOff, yOff) {
@@ -2426,6 +2459,111 @@ function renderMazeObject($obj, stage) {
 }
 
 //Main functions held in respective pages.
+
+/*************************************/
+/* Animation  functions	             */
+/*************************************/
+
+
+/*
+* animates something
+* drawFn a function that takes an alpha val and renders something
+* from starting position
+* to ending position
+* completeFn a function to be called after fade OUT is complete
+* easing a function for easing in/out
+*/
+function animate(drawFn, from, to, completeFn, easing) {
+	easing = (easing) ? easing : function (o) {return o;};
+	completeFn = (completeFn) ? completeFn : function () {};
+	var offset = 0, e = 0, i=20, dist = Math.abs(to-from);
+	var m = (from < to) ? -1 : 1;
+	var interval = setInterval(function () {
+			e = easing(offset);
+			drawFn(from+e);
+			offset += i;
+			if (offset > dist) {
+                clearInterval(interval);
+				 completeFn();
+			}
+        }, FRAMERATE); 
+}
+
+function toggleControls(completeFn) {
+	completeFn = (completeFn) ? completeFn : function () {};
+	var chv = !CONTROLS_HIDDEN;//hack so that we can render when showing controls
+	var from = (CONTROLS_HIDDEN) ? -(GRID_W*5) : CONTROL_POS;
+	var to = (CONTROLS_HIDDEN) ? CONTROL_POS : -(GRID_W*5);
+	CONTROLS_HIDDEN = false;
+	animate(renderScreen, from, to, 
+		function () {
+			CONTROLS_HIDDEN=chv;
+			completeFn();
+		});
+}
+
+//function pauseInLoop() {
+//	//Hide the controls
+//	if (ctrlHidden && pauseInPlace) {
+//			window.clearTimeout(request);
+//    		$("#maze-canvas-background").click(pauseClick);
+//			return;
+//	}
+//	if (!ctrlHidden) {
+//		ANIM_OFFSET += 10*SPRITE_SCALE;
+//	}
+//	if (ctrlHidden && !pauseInPlace) {
+//		PAUSE_Y += 10*SPRITE_SCALE;
+//	}
+//	renderScreen(ANIM_OFFSET); 
+//	renderPauseScreen();
+//	//render options images and circle
+//	pauseInPlace = (PAUSE_Y >= 4*GRID_H);
+//	ctrlHidden = ANIM_OFFSET>GRID_W*5;
+//    request = window.setTimeout(pauseInLoop, FRAMERATE);
+//}
+
+/*
+* fades something IN
+* drawFn a function that takes an alpha val and renders something
+* completeFn a function to be called after fade OUT is complete
+*/
+function fadeIn(drawFn, completeFn) {
+	var alpha = 0.0;
+	var interval = setInterval(function () {
+            alpha = alpha + 0.05; // decrease opacity (fade out)
+			drawFn(alpha);
+            if (alpha > 1.0) {
+                clearInterval(interval);
+				if (completeFn) {
+					completeFn();
+				}
+            }
+        }, 50); 
+}
+
+/*
+* fades something OUT 
+* drawFn a function that takes an alpha val and renders something
+* completeFn a function to be called after fade OUT is complete
+*/
+function fadeOut(drawFn, completeFn) {
+	var alpha = 1.0;
+	var interval = setInterval(function () {
+            alpha = alpha - 0.05; // decrease opacity (fade out)
+			drawFn(alpha);
+            if (alpha < 0.0) {
+                clearInterval(interval);
+				if (completeFn) {
+					completeFn();
+				}
+            }
+        }, 50); 
+}
+
+/*************************************/
+/* Sprite Map	                     */
+/*************************************/
 
 //maps sprites to the images in which they are held.
 var SPRITE_MAP = {
