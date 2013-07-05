@@ -2,7 +2,7 @@
 <html>
 <head>
   <!-- -->
-  <meta id="viewport" name="viewport" content="initial-scale=0.5, user-scalable=no"> 
+  <meta id="viewport" name="viewport" content="width=device-width, initial-scale=0.5"> 
   <title>Panda Dragon Maze</title>
   <%= stylesheet_link_tag    "application", :media => "all" %>
   <%= javascript_include_tag "application" %>
@@ -15,7 +15,7 @@
 			  var scale = Math.min(w/900, h/500);
 			  document.getElementById("viewport").setAttribute('content', "minimum-scale="+scale+", maximum-scale="+scale+", initial-scale="+scale+", user-scalable=no");
 				*/
-			  pdm.setViewportScale();
+			  //pdm.setViewportScale();
 
               var _gaq = _gaq || [];
               _gaq.push(['_setAccount', 'UA-28958846-1']);
