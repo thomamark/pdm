@@ -12,7 +12,7 @@ var DEBUG = false;
 
 /* Graphics */
 //Constants
-var FRAMERATE = 1000/60;
+var FRAMERATE = 1000/50;
 var SPRITE_SCALE = 2;
 var BASE_W = 32;
 var BASE_H= 16;
@@ -2129,6 +2129,35 @@ function procInput(action) {
 /* Game loop control functions       */
 /*************************************/
 
+// http://paulirish.com/2011/requestanimationframe-for-smart-animating/
+// http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
+// requestAnimationFrame polyfill by Erik Möller. fixes from Paul Irish and Tino Zijdel
+// MIT license
+(function() {
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+        window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+        window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] 
+                                   || window[vendors[x]+'CancelRequestAnimationFrame'];
+    }
+ 
+    if (!window.requestAnimationFrame)
+        window.requestAnimationFrame = function(callback, element) {
+            var currTime = new Date().getTime();
+            var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+            var id = window.setTimeout(function() { callback(currTime + timeToCall); }, 
+              timeToCall);
+            lastTime = currTime + timeToCall;
+            return id;
+        };
+ 
+    if (!window.cancelAnimationFrame)
+        window.cancelAnimationFrame = function(id) {
+            clearTimeout(id);
+        };
+}());
+
 // Thanks Paul Irish. shim layer with setTimeout fallback
 //Note this seems to break in Firefox and Safari, so I'm not using it.
 //window.requestAnimFrame = (function(){
@@ -2172,17 +2201,17 @@ function startGameLoop() {
 }
 
 function gameLoop() {
-	//request=window.requestAnimFrame(gameLoop,gameCanvas);
-	if (request) {
-		stopGameLoop();
-	}
-    request = window.setTimeout(gameLoop, FRAMERATE);
+	//if (request) {
+	//	stopGameLoop();
+	//}
+	request=window.requestAnimationFrame(gameLoop,gameCanvas);
+    //request = window.setTimeout(gameLoop, FRAMERATE);
 	update();
 }
 
 function stopGameLoop() {
-	//window.cancelRequestAnimFrame(request);
-    window.clearTimeout(request);
+	window.cancelAnimationFrame(request);
+    //window.clearTimeout(request);
 	request = undefined;
 }
 
