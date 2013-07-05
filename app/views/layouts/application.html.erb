@@ -9,7 +9,14 @@
   <%= yield :header %>
   <%= csrf_meta_tags %>
   <script type="text/javascript">
+				/*
+			  var w = Math.max(Response.viewportH(), Response.viewportW());
+			  var h = Math.min(Response.viewportH(), Response.viewportW());
+			  var scale = Math.min(w/900, h/500);
+			  document.getElementById("viewport").setAttribute('content', "minimum-scale="+scale+", maximum-scale="+scale+", initial-scale="+scale+", user-scalable=no");
+				*/
 			  pdm.setViewportScale();
+
               var _gaq = _gaq || [];
               _gaq.push(['_setAccount', 'UA-28958846-1']);
               _gaq.push(['_setDomainName', 'pandadragonmaze.com']);

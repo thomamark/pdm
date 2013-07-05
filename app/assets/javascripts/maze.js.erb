@@ -1231,11 +1231,11 @@ function findPos(obj) {
     return undefined;
 }
 
-function pdm.setViewportScale() {
+pdm.setViewportScale = function() {
 	var w = Math.max(Response.viewportH(), Response.viewportW());
 	var h = Math.min(Response.viewportH(), Response.viewportW());
 	var scale = Math.min(w/GAME_PX_W, h/GAME_PX_H);
-	document.getElementById("viewport").setAttribute('content', "min-scale="+scale+", max-scale="+scale+", initial-scale="+scale+", user-scalable=no");
+	document.getElementById("viewport").setAttribute('content', "minimum-scale="+scale+", maximum-scale="+scale+", initial-scale="+scale+", user-scalable=no");
 }
 
 /*************************************/
