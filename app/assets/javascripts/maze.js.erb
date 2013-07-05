@@ -8,23 +8,37 @@
 var pdm = {};
 pdm.state = {};
 
+var DEBUG = false;
+
 /* Graphics */
-var FRAMERATE = 1000/80;
+//Constants
+var FRAMERATE = 1000/60;
 var SPRITE_SCALE = 2;
 var BASE_W = 32;
 var BASE_H= 16;
+var GAME_PX_W = 900;
+var GAME_PX_H = 500;
+var OPTIONS_BAR_HEIGHT = 128;
+
+//Derivative constants
 var GRID_W = BASE_W*SPRITE_SCALE;
 var GRID_H = BASE_H*SPRITE_SCALE;
-var OPTIONS_BAR_HEIGHT = 128;
 var WALL_PAD=10*SPRITE_SCALE;
-var MAX_COLS = Math.floor(900/GRID_W);
-var MAX_ROWS = Math.floor(500/GRID_H);
+var MAX_COLS = Math.floor(GAME_PX_W/GRID_W);
+var MAX_ROWS = Math.floor(GAME_PX_H/GRID_H);
 var MAP_ICON_POS = MAX_COLS-2;
 var PAUSE_ICON_POS = MAX_COLS;
 var DEFAULT_WALL_YOFFSET = -10*SPRITE_SCALE;	//Need to get rid of this hack eventually
 var DEFAULT_STARTPT_YOFFSET = -13*SPRITE_SCALE;
 var DEFAULT_GOAL_YOFFSET = -GRID_H;
-var DEBUG = false;
+var optionsX = 100*SPRITE_SCALE;
+var optionsW = 257*SPRITE_SCALE;
+var optionsH = 100*SPRITE_SCALE;
+var OPS_TARGET_W = 120*(SPRITE_SCALE/2);
+var OPS_TARGET_H = 105*(SPRITE_SCALE/2);
+var opsPad = 5*SPRITE_SCALE;
+
+//Img caching
 var PDM_SS_IMG;
 var BORDER_IMG; 
 var SNAKE_IMG; 
@@ -77,7 +91,6 @@ var MAP_ICON;
 var PAUSE_ICON;
 var MAP_HEADER_BG;
 var BACK_IMG;
-
 var OPS_HOME_IMG;
 var OPS_FX_ON_IMG;
 var OPS_FX_OFF_IMG;
@@ -88,13 +101,6 @@ var OPS_FX_IMG;
 var OPS_SPEED_FAST_IMG;
 var OPS_SPEED_SLOW_IMG;
 var OPS_SPEED_IMG;
-var optionsX = 100*SPRITE_SCALE;
-var optionsW = 257*SPRITE_SCALE;
-var optionsH = 100*SPRITE_SCALE;
-var OPS_TARGET_W = 120*(SPRITE_SCALE/2);
-var OPS_TARGET_H = 105*(SPRITE_SCALE/2);
-var opsPad = 5*SPRITE_SCALE;
-
 
 var MAP_VISIBLE = false;
 
@@ -1223,6 +1229,13 @@ function findPos(obj) {
         return { x: curleft, y: curtop };
     }
     return undefined;
+}
+
+function pdm.setViewportScale() {
+	var w = Math.max(Response.viewportH(), Response.viewportW());
+	var h = Math.min(Response.viewportH(), Response.viewportW());
+	var scale = Math.min(w/GAME_PX_W, h/GAME_PX_H);
+	document.getElementById("viewport").setAttribute('content', "min-scale="+scale+", max-scale="+scale+", initial-scale="+scale+", user-scalable=no");
 }
 
 /*************************************/
