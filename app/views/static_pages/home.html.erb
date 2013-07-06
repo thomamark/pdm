@@ -7,7 +7,6 @@
   p { 
     color: black; 
     position: absolute;
-    text-align: center;
     /*left: 260px;
     top: 250px;
     width: 388px;
@@ -63,9 +62,21 @@
 		left: 262px;
 		width: 380px;
 		z-index: 1;
+		color: #FFFF32;
+		text-align: center;
 	}
 
-	#top-scores {
+	.center-content dt {
+		text-align: left;
+		font-weight: bold;
+	}
+
+	.center-content dd {
+		text-align: left;
+		margin-left: 1em;
+	}
+
+	.initially-hidden {
 		top: 550px;
 	}
 
@@ -74,7 +85,6 @@
 	}
 
 	.top-scores {
-		color: #FFFF32;
 		text-align: center;
 	}
 
@@ -88,6 +98,12 @@
 		padding: 0;
 		margin: 0;
 		list-style-position: inside;
+	}
+
+	.credits h5 {
+		color: #FFFFFF;
+		text-align: center;
+		margin: 0;
 	}
 
 	.menu-items li {
@@ -150,6 +166,7 @@
 	  //initialize content to show
 	  content.push($('#main'));
 	  content.push($('#top-scores'));
+	  content.push($('#credits'));
 
   	if ( pdm.hasSavedGame()){
 		//We found a saved game
@@ -205,7 +222,7 @@
 <div id="blackout">
 	&nbsp;
 </div>
-<div id="top-scores" class="center-content top-scores">
+<div id="top-scores" class="center-content initially-hidden top-scores">
 	<h3>Top scores</h3>
 	<ol>
 		<li>MRT.........100%</li>
@@ -218,4 +235,12 @@
 		<li>KSL..........55%</li>
 		<li>UUL..........45%</li>
 	</ol>
+</div>
+
+<div id="credits" class="center-content initially-hidden credits">
+	<h4>GAME DESIGN</h4>
+	<h5>Mark Thomas</h5>
+	<br>
+	<h4>MUSIC AND FX</h4>
+	<h5>Matt Thomas</h5>
 </div>
