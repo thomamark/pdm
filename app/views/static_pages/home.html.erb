@@ -3,13 +3,15 @@
 
 <% content_for :header do %>
 <style type="text/css">
+
   p { 
     color: black; 
     position: absolute;
     text-align: center;
-    left: 260px;
+    /*left: 260px;
     top: 250px;
     width: 388px;
+	*/
     margin: 0;
   
   }
@@ -19,11 +21,20 @@
     color: white;
     font-weight: bold;
     text-align: center;
-    left: 260px;
+    left: 262px;
     top: 401px;
     width: 388px;
     margin: 0;
   }
+
+ #blackout {
+	width: 900px;
+	height: 300px;
+	background-color: black;
+	z-index: 2;
+	position:relative;
+	}
+
 
   #intro {
     background-image: url(<%= asset_path 'title_clean.png' %>);
@@ -33,7 +44,6 @@
 
 	.menu-items {
 		position:relative;
-		top: 250px;
 		width: 100%;
 		padding: 0px;
 		margin: auto;
@@ -43,10 +53,42 @@
 	}
 
 	#story {
-		position: absolute;
-		top: 250px;
+		position: relative;
 		margin: auto;
+		padding-bottom: 15px;
 		}
+
+	.center-content {
+		position: absolute;
+		left: 262px;
+		width: 380px;
+		z-index: 1;
+	}
+
+	#top-scores {
+		top: 550px;
+	}
+
+	#main {
+		top: 250px;
+	}
+
+	.top-scores {
+		color: #FFFF32;
+		text-align: center;
+	}
+
+	.top-scores h3 {
+		margin-top: -5px;
+		padding-top: 0;
+	}
+		
+
+	.top-scores ol {
+		padding: 0;
+		margin: 0;
+		list-style-position: inside;
+	}
 
 	.menu-items li {
 		background-image: url(<%= asset_path('button_empty.png') %>);
@@ -86,13 +128,33 @@
   }
 */
 
+	var content = [];
+	var contentIndex= 0;
+	var request;
+
+	function animateContent(hide, show) {
+		hide.animate({top:"550px"}, function () {
+			show.animate({top:"250px"})});
+	}
+
+	function showNextContent() {
+		var next = (contentIndex+1) % content.length;
+		animateContent(content[contentIndex], content[next]);
+		contentIndex = next;
+		request = window.setTimeout(showNextContent, 5000);
+	}
+
+
   $('document').ready( function() {
       window.onkeydown = onKeyDown;
-      //window.setTimeout(blinker, 50000 / 60);
+	  //initialize content to show
+	  content.push($('#main'));
+	  content.push($('#top-scores'));
+
   	if ( pdm.hasSavedGame()){
 		//We found a saved game
 		$("#story").addClass("no-display");
-		$("#continue").click(function () { window.location = "play";}).removeClass("hidden");
+		$("#continue").click(function () { window.location = "play";}).removeClass("no-display");
   	}
 
 	$("#new").click(function() { 
@@ -103,7 +165,19 @@
 		}
 		window.location="/play";
 		});
+
+	$(window).mousemove(function () { 
+		window.clearTimeout(request);
+		if (contentIndex != 0) {
+			animateContent(content[contentIndex], content[0]);
+			contentIndex = 0;
+		}
+		request=window.setTimeout(showNextContent, 5000);
 	});
+
+	request=window.setTimeout(showNextContent, 5000);
+
+  });
 
 </script>
 
@@ -119,10 +193,29 @@
 </audio>
 -->
 <div id="intro">
-  <p id="story" >The pandas are being burgled! Twist through the burgler&#146;s mazes and save them before it&#146;s too late!</p>
-	<ul class="menu-items">
-		<li id="continue" class="hidden">Continue</li>
-		<li id="new">New game</li>
-	</ul>
+  <div id="main" class="center-content">
+	  <p id="story" >The pandas are being burgled! Twist through the burgler&#146;s mazes and save them before it&#146;s too late!</p>
+		<ul class="menu-items">
+			<li id="continue" class="no-display">Continue</li>
+			<li id="new">New game</li>
+		</ul>
+	</div>
   <!-- <h2 id="enterText">Press Enter</h2> -->
+</div>
+<div id="blackout">
+	&nbsp;
+</div>
+<div id="top-scores" class="center-content top-scores">
+	<h3>Top scores</h3>
+	<ol>
+		<li>MRT.........100%</li>
+		<li>CRH..........99%</li>
+		<li>LCT..........91%</li>
+		<li>MMR..........90%</li>
+		<li>CCT..........89%</li>
+		<li>FFT..........73%</li>
+		<li>ERT..........61%</li>
+		<li>KSL..........55%</li>
+		<li>UUL..........45%</li>
+	</ol>
 </div>
