@@ -434,6 +434,7 @@ Maze.prototype.getStart = function () {
 }
 
 Maze.prototype.collectBonus = function(){
+	if (mixpanel) { mixpanel.track("Bonus collected: level "+pdm.state.currentLevel);}
     this.gotBonuses +=1;
 	LEVEL_SCORE += 1;
     //LEVEL_SCORE += EARNED_POINTS['bonus'];
@@ -980,6 +981,7 @@ function cleanUp() {
 }
 
 function mazeCollision() {
+	if (mixpanel) { mixpanel.track("Collision: Level "+pdm.state.currentLevel);}
     game_state = GAME_STATES.FAILED;
     stopMusic();
     playMultiSound('defeat');
@@ -993,6 +995,7 @@ function mazeCollision() {
 }
 
 function game_over() {
+	if (mixpanel) { mixpanel.track("Game over: level "+pdm.state.currentLevel);}
 	game_state = GAME_STATES.GAME_OVER;
 	renderWrapUp(wallStage, 200,125);
 	deleteSavedGame();
@@ -1712,6 +1715,7 @@ function initUi() {
 function maze_init(){
     if(game_state == GAME_STATES.COMPLETE) {
         if (pdm.state.currentLevel>=pdm.state.map.levels.length){
+			if (mixpanel) { mixpanel.track("Game completed");}
             gameComplete();
             return;
         }
@@ -1722,10 +1726,12 @@ function maze_init(){
 
     if (game_state != GAME_STATES.FAILED) {
       if (pdm.state.currentLevel >= pdm.state.map.levels.length) { 
+		if (mixpanel) { mixpanel.track("Messed up cookies: given level "+pdm.state.currentLevel);}
         //Ran into messed up cookie values.
         pdm.state.currentLevel = 0; 
         pdm.state.totalScore = 0;
       }
+		if (mixpanel) { mixpanel.track("Loading level "+pdm.state.currentLevel);}
 	  	maze = new Maze(pdm.state.map.levels[pdm.state.currentLevel].currentMazeStr);
 		pdm.state.map.levels[pdm.state.currentLevel].visited = true;
     }
