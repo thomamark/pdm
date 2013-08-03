@@ -165,6 +165,7 @@
       window.onkeydown = onKeyDown;
 	  //initialize content to show
 	  content.push($('#main'));
+	  content.push($('#todays-top-scores'));
 	  content.push($('#top-scores'));
 	  content.push($('#credits'));
 
@@ -222,18 +223,26 @@
 <div id="blackout">
 	&nbsp;
 </div>
-<div id="top-scores" class="center-content initially-hidden top-scores">
-	<h3>Top scores</h3>
+
+<div id="todays-top-scores" class="center-content initially-hidden top-scores">
+	<h3>Today's Top Scores</h3>
 	<ol>
-		<li>MRT.........100%</li>
-		<li>CRH..........99%</li>
-		<li>LCT..........91%</li>
-		<li>MMR..........90%</li>
-		<li>CCT..........89%</li>
-		<li>FFT..........73%</li>
-		<li>ERT..........61%</li>
-		<li>KSL..........55%</li>
-		<li>UUL..........45%</li>
+		<% @tt_today.each do |s| %>
+		<li>
+			<%= s.name %><% (12-s.score.to_s().length()).times do %><%=  "." %><% end %><%= s.score %>%
+		</li>
+		<% end %>
+	</ol>
+</div>
+
+<div id="top-scores" class="center-content initially-hidden top-scores">
+	<h3>All-Time Top Scores</h3>
+	<ol>
+		<% @tt.each do |s| %>
+		<li>
+			<%= s.name %><% (12-s.score.to_s().length()).times do %><%=  "." %><% end %><%= s.score %>%
+		</li>
+		<% end %>
 	</ol>
 </div>
 

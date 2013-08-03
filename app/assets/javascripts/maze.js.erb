@@ -1179,6 +1179,12 @@ function Level (originalMazeStr, specialMapImg, currentMazeStr, completed, visit
 /*************************************/
 /* Utility functions                 */
 /*************************************/
+
+function recordScore(n,s) {
+	 $.post("scores", { "score" : { name: n, score: s}} );
+}
+
+
 //Detects whether or not this is a touch screen
 // from http://stackoverflow.com/questions/4817029/whats-the-best-way-to-detect-a-touch-screen-device-using-javascript
 function is_touch_device() {
