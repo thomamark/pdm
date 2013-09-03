@@ -143,9 +143,23 @@
        window.setTimeout(blinker, 50000/60);
   }
 */
+function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
 
 	var content = [];
-	var contentIndex= 0;
+	var contentIndex =0;
+	try {
+		contentIndex= Math.abs(parseInt(getParameterByName("ci")));
+	} catch (e) {
+		contentIndex = 0;
+	} finally {
+		contentIndex= (contentIndex) ? contentIndex : 0;
+	}
+	
 	var request;
 
 	function animateContent(hide, show) {
@@ -168,6 +182,8 @@
 	  content.push($('#todays-top-scores'));
 	  content.push($('#top-scores'));
 	  content.push($('#credits'));
+
+	contentIndex %= content.length;
 
   	if ( pdm.hasSavedGame()){
 		//We found a saved game
@@ -192,6 +208,10 @@
 		}
 		request=window.setTimeout(showNextContent, 5000);
 	});
+
+	if (contentIndex>0){
+		animateContent(content[0], content[contentIndex]);
+	}
 
 	request=window.setTimeout(showNextContent, 5000);
 

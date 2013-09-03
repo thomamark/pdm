@@ -117,21 +117,11 @@ var INIT_GAME = true;
 
 var DEFAULT_LIVES = 10;
 
-
 /* Maze encoding variables */
 var ENC_W = 2; //num of digits per point in a string
 var DEFAULT_BASE = 16; //Default digit base for string output (currently hexadecimal)
 var WI = 0;
 var SIZEI = 1;
-
-/* Isometric rendering */
-var COS=Math.cos(0.46365);
-var SIN=Math.sin(0.46365);
-//var X_ORIGIN=540;
-//var Y_ORIGIN=420;
-var X_ORIGIN=240;
-var Y_ORIGIN=400;
-var ISOMETRIC = false;
 
 /* I/O */
 var LEFT_ARROW=37;
@@ -196,6 +186,7 @@ var TYPES = {
 	PANDA : 2,
 	GOAL: 3,
 	START: 4, 
+	//MWALL: 5, 
 }
 
 var DIFFICULTIES= {
@@ -209,6 +200,7 @@ POINTS[TYPES.WALL] =  WallPoint;
 POINTS[TYPES.PANDA] = PandaPoint;
 POINTS[TYPES.GOAL] = GoalPoint;
 POINTS[TYPES.START] = StartPoint;
+//POINTS[TYPES.MWALL] =  MagicWallPoint;
 
 var BLANK = undefined; //Value for ablank space.
 
@@ -311,6 +303,14 @@ Point.prototype.toString = function(base, pad_w){
 function WallPoint(r,c)  {
 	return new Point(WALL_BLOCK_IMG, r, c, mazeCollision, TYPES.WALL, DEFAULT_WALL_YOFFSET);
 }
+
+//function MagicWallPoint(r,c) {
+//	var p = new WallPoint(r,c);
+//	p.obj_type = TYPES.MWALL;
+//	p.isOn = function() {
+//			//do nothing
+//		};
+//}
 
 /* A goal. 
  * dest: an int ID for another maze where this goal will take you.
@@ -988,64 +988,132 @@ function mazeCollision() {
     LEVEL_SCORE = 0;
 	pdm.state.lives -=1;
 	pdm.state.deaths+=1;
+	saveGameState();
     cleanUp();
 	if (pdm.state.lives <= 0) {
 		game_over();
 	}
 }
 
-function game_over() {
-	if (mixpanel) { mixpanel.track("Game over: level "+pdm.state.currentLevel);}
-	game_state = GAME_STATES.GAME_OVER;
-	renderWrapUp(wallStage, 200,125);
-	deleteSavedGame();
-}
-
-function renderWrapUp(stage, xOff, yOff) {
-	/*
-  	mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
-  	wallStage.clearRect(0,0,wallStage.canvas.width, wallStage.canvas.height);
-  	tileStage.clearRect(0,0,tileStage.canvas.width, tileStage.canvas.height);
-	*/
+//TODO: remove in favor of server-side score calculation
+function calcCoverage() {
 	var cL = vL = tL = 0;
-
-	var lh = 13*SPRITE_SCALE;  //line height
-	var tab = 25*SPRITE_SCALE; //tab width
-	var p = 10*SPRITE_SCALE; // padding width
-
-	//Lines
-	var hl = yOff +lh;
-	var l1 = hl+2*lh;
-	var l2 = l1 +lh;
-	var l3 = l2+lh;
-	var l4 = l3+lh;
-	var ft = l4+2*lh;
-
-	//columns
-	var col1 = xOff + p;
-	var col2 = xOff + p + 6*tab;
-
-	roundRect(stage, xOff, yOff,
-        optionsW, optionsH+50, 10*SPRITE_SCALE,
-        "rgba(0,0,0, 0.8)", false);
-
 	for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
 		tL +=1;
 		if (pdm.state.map.levels[level].visited) { vL +=1; }
 		if (pdm.state.map.levels[level].completed) { cL +=1; }
 	}
-	stagePrint("Game over!", col1+3*tab, hl, stage, "#ffffff", "24px StarPerv");
-	stagePrint("Pandas: ", col1, l1, stage, "#ffffff");
-	stagePrint(pdm.state.totalScore, col2, l1, stage, "#CC3300");
-	stagePrint("Deaths: ", col1, l2, stage, "#ffffff");
-	stagePrint(pdm.state.deaths, col2, l2, stage, "#CC3300");
-	stagePrint("Completed levels: ", col1, l3, stage, "#ffffff");
-	stagePrint(cL +"/"+tL, col2, l3, stage, "#CC3300");
-	stagePrint("Your rank: ", col1,l4,stage, "#ffffff");
-	stagePrint(getRank(pdm.state.totalScore, pdm.state.totalDeaths, cL, vL), col2, l4, stage, "#CC3300");
-	stagePrint("Press enter to retrun to main screen", col1+tab ,ft,stage,"#ffffff" , "12px StarPerv");
-	
+
+	var c =(cL/tL).toFixed(2) * 100; 
+	console.log("coverage: " + c);
+	return c;
 }
+
+function getCurrentRank(callBack) {
+	$.getJSON("myRank", {c: calcCoverage()}, callBack).fail(
+   function () {
+      alert('Problem communicating with high score server--scores not recorded.');
+      deleteSavedGame();
+      window.location="/";
+    });
+
+  //Stub it out
+//  callBack({today:"9th", overall:"Embarrassment", coverage:0.8});
+}
+
+function game_over() {
+	if (mixpanel) { mixpanel.track("Game over: level "+pdm.state.currentLevel);}
+	game_state = GAME_STATES.GAME_OVER;
+	cleanUp(); //stop the game loop
+	getCurrentRank(renderGo);
+	//renderWrapUp(wallStage, 200,125);
+}
+
+function blink() {
+	var txt = ($('#go-name').attr("placeholder") == "___" ) ? " __" : "___";
+	$('#go-name').attr("placeholder", txt);
+	request = window.setTimeout(blink, 800);
+};
+
+function renderGo(rankData) {
+	deleteSavedGame();
+	var today = overall = coverage = "Unknown"
+	if (rankData) {
+      coverage = rankData['coverage'];
+			today = rankData['today'];
+			overall = rankData['overall'];
+	}
+
+  $('#coverage').text(coverage+"%");
+  $('#rank-today').text(today);
+  $('#rank-overall').text(overall);
+	
+	$('#go').removeClass('no-display');
+	$('#go').animate({top: "+=475"}, 1000, "easeOutBounce");
+	$('#go-ok').click(function(){
+    recordScore(coverage);
+		window.location="/?ci=1";
+  });
+	$('#go-name').focus();
+  blink();
+}
+
+//function renderWrapUp(stage, xOff, yOff) {
+//	var cL = vL = tL = 0;
+//	for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
+//		tL +=1;
+//		if (pdm.state.map.levels[level].visited) { vL +=1; }
+//		if (pdm.state.map.levels[level].completed) { cL +=1; }
+//	}
+//
+//	$('#go').removeClass('no-display');
+//	$('#go').animate({top: "+=465"}, 1000, "easeOutBounce");
+//	$('#go-ok').click(function(){recordScore($('#go-name').text(), ((cL/tL)*100).toFixed(2))});
+//
+//	/*
+//  	mapStage.clearRect(0,0,mapStage.canvas.width, mapStage.canvas.height);
+//  	wallStage.clearRect(0,0,wallStage.canvas.width, wallStage.canvas.height);
+//  	tileStage.clearRect(0,0,tileStage.canvas.width, tileStage.canvas.height);
+//	*/
+//
+//	var cL = vL = tL = 0;
+//	for(var level = 0, numlvls = pdm.state.map.levels.length; level < numlvls; level +=1) {
+//		tL +=1;
+//		if (pdm.state.map.levels[level].visited) { vL +=1; }
+//		if (pdm.state.map.levels[level].completed) { cL +=1; }
+//	}
+//	var lh = 13*SPRITE_SCALE;  //line height
+//	var tab = 25*SPRITE_SCALE; //tab width
+//	var p = 10*SPRITE_SCALE; // padding width
+//
+//	//Lines
+//	var hl = yOff +lh;
+//	var l1 = hl+2*lh;
+//	var l2 = l1 +lh;
+//	var l3 = l2+lh;
+//	var l4 = l3+lh;
+//	var ft = l4+2*lh;
+//
+//	//columns
+//	var col1 = xOff + p;
+//	var col2 = xOff + p + 6*tab;
+//
+//	roundRect(stage, xOff, yOff,
+//        optionsW, optionsH+50, 10*SPRITE_SCALE,
+//        "rgba(0,0,0, 0.8)", false);
+//
+//	stagePrint("Game over!", col1+3*tab, hl, stage, "#ffffff", "24px StarPerv");
+//	stagePrint("Pandas: ", col1, l1, stage, "#ffffff");
+//	stagePrint(pdm.state.totalScore, col2, l1, stage, "#CC3300");
+//	stagePrint("Deaths: ", col1, l2, stage, "#ffffff");
+//	stagePrint(pdm.state.deaths, col2, l2, stage, "#CC3300");
+//	stagePrint("Completed levels: ", col1, l3, stage, "#ffffff");
+//	stagePrint(cL +"/"+tL, col2, l3, stage, "#CC3300");
+//	stagePrint("Your rank: ", col1,l4,stage, "#ffffff");
+//	stagePrint(getRank(pdm.state.totalScore, pdm.state.totalDeaths, cL, vL), col2, l4, stage, "#CC3300");
+//	stagePrint("Press enter to retrun to main screen", col1+tab ,ft,stage,"#ffffff" , "12px StarPerv");
+//	
+//}
 
 function getRank(score, deaths, completed, visited) {
 	return "Demure lizard";
@@ -1179,9 +1247,10 @@ function Level (originalMazeStr, specialMapImg, currentMazeStr, completed, visit
 /*************************************/
 /* Utility functions                 */
 /*************************************/
-
-function recordScore(n,s) {
-	 $.post("scores", { "score" : { name: n, score: s}} );
+function recordScore(s) {
+   n = $('#go-name').val();
+	 $.post("scores", { "score" : { name: n, score: s}}, function (d) {console.log("Score successfully logged")})
+      .fail(function () {console.log("Problem communicating with high score server--score not recorded. Sorry!")});
 }
 
 
@@ -1734,7 +1803,7 @@ function maze_init(){
       if (pdm.state.currentLevel >= pdm.state.map.levels.length) { 
 		if (mixpanel) { mixpanel.track("Messed up cookies: given level "+pdm.state.currentLevel);}
         //Ran into messed up cookie values.
-        pdm.state.currentLevel = 0; 
+        pdm.state.currntLevel = 0; 
         pdm.state.totalScore = 0;
       }
 		if (mixpanel) { mixpanel.track("Loading level "+pdm.state.currentLevel);}
@@ -1753,6 +1822,8 @@ function maze_init(){
 	maze.addPoint(dragon);
 	maze.render(wallStage);
 	renderControls(wallStage);
+	if (pdm.state.currentLevel==16 && maze.getPoint(9,6)) {maze.getPoint(9,6).isOn = function () {}};
+	if (pdm.state.currentLevel==12 && maze.getPoint(13,9)) {maze.getPoint(13,9).isOn = function () {}};
     dir= (pdm.state.exitdir) ? pdm.state.exitdir : "start";
     startMusic();
 	startGameLoop();
@@ -1891,13 +1962,15 @@ function toggleOptions() {
 		
 		//draw the background image
 		mapStage.drawImage(pdm.state.map.img,0,0);
-		mapStage.globalAlpha = 0.5;
+		mapStage.globalAlpha = 0.9;
 		mapStage.fillStyle = "#000000";
 		mapStage.fillRect(0, 0, mapStage.canvas.width, pdm.state.map.gridH);
 		mapStage.globalAlpha = 1;
 	
 		mapStage.drawImage(MAP_HEADER_BG,0,0);
 		renderObject(mapStage, BACK_IMG,  391*SPRITE_SCALE, 21*SPRITE_SCALE);
+		stagePrint("Collect all Pandas to complete a level.", 50, 40, mapStage); 
+		stagePrint("Complete all levels to be AWESOME.", 50, 80, mapStage); 
 		//mapStage.drawImage(BACK_IMG.img, 391*SPRITE_SCALE, 21*SPRITE_SCALE);
 		
 		
@@ -1922,16 +1995,20 @@ function toggleOptions() {
 			var x = pdm.state.map.gridW*(level%pdm.state.map.cols);
 			var y = pdm.state.map.gridH*Math.floor(level/pdm.state.map.cols) + OPTIONS_BAR_HEIGHT;
 			if (level==pdm.state.currentLevel) {
-				mapStage.drawImage(MAP_DRAGON_IMG, x,y);
+				//mapStage.drawImage(MAP_DRAGON_IMG, x,y);
+				renderObject(mapStage, MAP_DRAGON_IMG,  x, y);
 			} else if (!pdm.state.map.levels[level].visited) {
-				mapStage.globalAlpha = 0.5;
+				mapStage.globalAlpha = 0.9;
 				mapStage.fillStyle = "#000000";
 				mapStage.fillRect(x, y, pdm.state.map.gridW, pdm.state.map.gridH);
 				mapStage.globalAlpha = 1;
 			} else if (pdm.state.map.levels[level].specialImg) {
-				mapStage.drawImage(pdm.state.map.specialImg, x, y);
+				//mapStage.drawImage(pdm.state.map.specialImg, x, y);
+				//renderObject(mapStage, pdm.state.map.specialImg,  x, y);
+				renderObject(mapStage, pdm.state.map.specialImg,  x, y);
 			} else if (pdm.state.map.levels[level].completed) {
-				mapStage.drawImage(pdm.state.map.completeImg, x, y);
+				//mapStage.drawImage(pdm.state.map.completeImg, x, y);
+				renderObject(mapStage, COMPLETE_IMG,  x, y);
 			}
 		}
 
@@ -1988,7 +2065,9 @@ function init_levels() {
 	//3
 	lvls.push(new Level("20f0e01010101010101010101010101010104000100000000000100000001010000010001010100010001000101000000000002000000020100010100000100010101000000010001010000010001000000010000000101000201000102000001010101010100000100000001000000000003040100000100000001000101010001010000010001010100000000000101000101000002000001000100010100000000010101000100010201010101000001000100010001000101000000000100010000000000010101030a0101010101010101010101"));
 	//4	
-	lvls.push(new Level("20f0e01010101010101010101010101010104000000000000000000000001010000000000000000000000000101000000000000000000000000010102020000010100000100000201010200020001000100020202010101020002000100010001000002010303020200000100010002000001010102000000010001000100000201010200000001000100020000010101020000000101000001000002010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101030b030b030b010101010101"));
+	//lvls.push(new Level("20f0e01010101010101010101010101010104000000000000000000000001010000000000000000000000000101000000000000000000000000010102020000010100000100000201010200020001000100020202010101020002000100010001000002010303020200000100010002000001010102000000010001000100000201010200000001000100020000010101020000000101000001000002010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101030b030b030b010101010101"));
+	lvls.push(new Level("20f0e01010101010101010101010101010104000000000000000000000001010000000000000000000000000101000000000000000000000000010100000100020102000100000001010000020000000100020000000101000001000100010001000000010303000002000102010002000000010100000100010001000100000001010000020001000000020000000101000001000201020001000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101030b030b030b010101010101"));
+
 	//5
 	lvls.push(new Level("20f0e0101010101010101010101010101010000000000000000000000000101000101010201010102010100010100010000000000000000000001010001020000000000000000000101000100000000000000010101010100010001020101010201000003060100010000000000000001000001010001010101010100000100000101000000000000010000010002010100000101010001000101000101010000000201000100020100020101000000000100010000010000010100000000010401000000000001010101010101030c01010101010101"));
 
@@ -2050,7 +2129,7 @@ function onTouchEnd(evt) {
 }
 
 function onKeyDown(evt){
-	evt.preventDefault();
+	//evt.preventDefault();
 	procInput(evt.keyCode);
 }
 
@@ -2216,14 +2295,14 @@ function gameLoop() {
 	//if (request) {
 	//	stopGameLoop();
 	//}
-	request=window.requestAnimationFrame(gameLoop,gameCanvas);
-    //request = window.setTimeout(gameLoop, FRAMERATE);
+	//request=window.requestAnimationFrame(gameLoop,gameCanvas);
+    request = window.setTimeout(gameLoop, FRAMERATE);
 	update();
 }
 
 function stopGameLoop() {
-	window.cancelAnimationFrame(request);
-    //window.clearTimeout(request);
+	//window.cancelAnimationFrame(request);
+    window.clearTimeout(request);
 	request = undefined;
 }
 

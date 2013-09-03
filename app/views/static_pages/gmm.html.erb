@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<% content_for :header do %>
+	 <title>Panda Dragon Maze - Meta map generator</title>
+
+		<style type="text/css">
+       .thumb-canvas{
+          position: absolute;
+          left: 950px;
+       }
+
+    </style>
+		<script>
+
+      INIT_GAME = false; //don't want to load the full game.
+
+
+
+      /** Creates a png version of a meta map based on the levels contained within it.
+      * map a Maze Map object initialized with levels.
+      * mazeStage
+      * mazeCanvas
+      * mapStag
+      * mapCanvas
+      * tileStage/Canvas
+      **/
+      function genMetaMap(map, mazeStage, mazeCanvas, mapStage, mapCanvas, tileStage, tileCanvas) {
+          //fitted to trim the last row and column out of 128x128 representation
+          var defaultScaleW = .153;
+          var defaultScaleH = .286;
+          var lastColScaleW = .15;
+          var lastRowScaleH = .267;
+          var levels = map.levels;
+          var tileBgImg;
+          var mazeImg = new Image();
+          var scaleW;
+          var scaleH;
+
+          tileStage.scale(lastColScaleW, lastRowScaleH);
+          mazeStage.scale(defaultScaleW, defaultScaleH);
+
+          mazeStage.save();
+          //create meta map image.
+          for(var level = 0, numlvls = levels.length; level < numlvls; level +=1) {
+              mazeStage.clearRect(0,0,mazeCanvas.width,mazeCanvas.height);
+
+//              scaleW = ((level%map.cols) == (map.cols -1)) ? lastColScaleW : defaultScaleW; 
+//              scaleH = ((level%map.rows) == (map.rows -1)) ? lastRowScaleH : defaultScaleH; 
+//              mazeStage.restore(); //reset scale before setting again.
+//              mazeStage.scale(scaleW, scaleH);
+
+              var x = map.gridW*(level%map.cols);
+              var y = map.gridH*Math.floor(level/map.cols) + OPTIONS_BAR_HEIGHT-15;
+      
+              maze = new Maze(levels[level].originalMazeStr); 
+              if (!tileBgImg) {
+                maze.renderTiles(tileStage);
+                tileBgImg = new Image();
+                tileBgImg.src = tileCanvas.toDataURL("image/png");
+              }
+              mapStage.drawImage(tileBgImg, x, y);
+
+              maze.render(mazeStage);
+              mazeImg.src = mazeCanvas.toDataURL("image/png");
+              mapStage.drawImage(mazeImg, x, y);
+          }   
+          
+          $('#dl').attr("href", mapCanvas.toDataURL("image/png"));
+      }
+
+		  $(document).ready( function () {
+
+	          mazeCanvas = document.getElementById('maze-canvas');
+	          mapCanvas = document.getElementById('map-canvas');
+		  	    tileCanvas = document.getElementById('tile-canvas');
+	          mazeStage = mazeCanvas.getContext("2d");
+	          mapStage = mapCanvas.getContext("2d");
+	          tileStage = tileCanvas.getContext("2d");
+	
+		  	    var hpx = MAX_ROWS*GRID_H+WALL_PAD;
+		  	    var wpx = MAX_COLS*GRID_W;
+            var map_pad = 10;
+		  		
+	          $('#maze-canvas').attr("height", hpx);
+	          $('#maze-canvas').attr("width", wpx);
+	          $('#map-canvas').attr("height", hpx);
+	          $('#map-canvas').attr("width", wpx+map_pad);
+	          $('#tile-canvas').attr("height", hpx);
+	          $('#tile-canvas').attr("width", wpx);
+
+	          $('#maze-canvas').height(hpx);
+	          $('#maze-canvas').width(wpx);
+	          $('#map-canvas').height(hpx);
+	          $('#map-canvas').width(wpx);
+	          $('#tile-canvas').height(hpx);
+	          $('#tile-canvas').width(wpx);
+		  		
+	          init(function () {
+              init_map();
+              genMetaMap(pdm.state.map, mazeStage, mazeCanvas, mapStage, mapCanvas, tileStage, tileCanvas);
+		  		  });
+	        });
+		</script>
+ <% end %>
+        <div class="canvas" id="game-content">
+                <canvas class="canvas thumb-canvas" id="tile-canvas" style="z-index: 1;"></canvas>
+                <canvas class="canvas thumb-canvas" id="maze-canvas" style="z-index: 2;"></canvas>
+                <canvas class="canvas" id="map-canvas" style="z-index: 3;"></canvas>
+        </div>
+        <a id="dl" download="map-bg.png" href="#">Download</a>
