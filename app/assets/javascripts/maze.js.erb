@@ -12,7 +12,7 @@ var DEBUG = false;
 
 /* Graphics */
 //Constants
-var FRAMERATE = 1000/50;
+var FRAMERATE = 25;
 var SPRITE_SCALE = 2;
 var BASE_W = 32;
 var BASE_H= 16;
@@ -1044,15 +1044,17 @@ function renderGo(rankData) {
 			overall = rankData['overall'];
 	}
 
-  $('#coverage').text(coverage+"%");
-  $('#rank-today').text(today);
-  $('#rank-overall').text(overall);
+	if (game_state == GAME_STATES.COMPLETE) {
+		$('#go-title').val("Game complete!");
+	}
+	$('#coverage').text(coverage+"%");
+	$('#rank-today').text(today);
+	$('#rank-overall').text(overall);
 	
 	$('#go').removeClass('no-display');
 	$('#go').animate({top: "+=475"}, 1000, "easeOutBounce");
 	$('#go-ok').click(function(){
     recordScore(coverage);
-		window.location="/?ci=1";
   });
 	$('#go-name').focus();
   blink();
@@ -1160,7 +1162,8 @@ function gameComplete() {
 }
 
 function closingSequence() {
-	renderWrapUp(mapStage, 200,125);
+	game_over();
+	//renderWrapUp(mapStage, 200,125);
 }
 
 
@@ -1249,8 +1252,15 @@ function Level (originalMazeStr, specialMapImg, currentMazeStr, completed, visit
 /*************************************/
 function recordScore(s) {
    n = $('#go-name').val();
-	 $.post("scores", { "score" : { name: n, score: s}}, function (d) {console.log("Score successfully logged")})
-      .fail(function () {console.log("Problem communicating with high score server--score not recorded. Sorry!")});
+	 $.post("scores", { "score" : { name: n, score: s}}, 
+		function (d) {
+			console.log("Score successfully logged");
+			window.location="/?ci=1";
+		})
+      .fail(function () {
+			console.log("Problem communicating with high score server--score not recorded. Sorry!");
+			window.location="/?ci=1";
+		});
 }
 
 

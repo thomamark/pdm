@@ -100,10 +100,17 @@
 		list-style-position: inside;
 	}
 
+	.credits h4 {
+		text-align: center;
+		font-size: 14px;
+		margin: 0;
+	}
 	.credits h5 {
 		color: #FFFFFF;
 		text-align: center;
-		margin: 0;
+		margin: 10px 0 35px 0;
+		padding: 0;
+		
 	}
 
 	.menu-items li {
@@ -152,6 +159,7 @@ function getParameterByName(name) {
 
 	var content = [];
 	var contentIndex =0;
+	var initializing = true;
 	try {
 		contentIndex= Math.abs(parseInt(getParameterByName("ci")));
 	} catch (e) {
@@ -164,7 +172,9 @@ function getParameterByName(name) {
 
 	function animateContent(hide, show) {
 		hide.animate({top:"550px"}, function () {
-			show.animate({top:"250px"})});
+			show.animate({top:"250px"}, function () {
+					if (initializing) { initializing = false; }})
+			});
 	}
 
 	function showNextContent() {
@@ -201,6 +211,7 @@ function getParameterByName(name) {
 		});
 
 	$(window).mousemove(function () { 
+		if (initializing) {return;}
 		window.clearTimeout(request);
 		if (contentIndex != 0) {
 			animateContent(content[contentIndex], content[0]);
@@ -269,7 +280,9 @@ function getParameterByName(name) {
 <div id="credits" class="center-content initially-hidden credits">
 	<h4>GAME DESIGN</h4>
 	<h5>Mark Thomas</h5>
-	<br>
-	<h4>MUSIC AND FX</h4>
+	<h4>MUSIC AND SOUND FX</h4>
 	<h5>Matt Thomas</h5>
+	<h4>GRAPHICS</h4>
+	<h5>Black Moon Design
+		blackmoondev.com</h5>
 </div>
