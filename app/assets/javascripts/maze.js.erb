@@ -1004,7 +1004,7 @@ function calcCoverage() {
 		if (pdm.state.map.levels[level].completed) { cL +=1; }
 	}
 
-	var c =(cL/tL).toFixed(2) * 100; 
+	var c =((cL/tL) * 100).toFixed(2); 
 	console.log("coverage: " + c);
 	return c;
 }
@@ -1038,10 +1038,12 @@ function blink() {
 function renderGo(rankData) {
 	deleteSavedGame();
 	var today = overall = coverage = "Unknown"
+	var ranked = null;
 	if (rankData) {
-      coverage = rankData['coverage'];
-			today = rankData['today'];
-			overall = rankData['overall'];
+      	coverage = rankData['coverage'];
+		today = rankData['today'];
+		overall = rankData['overall'];
+		ranked = today != "Embarrassment";
 	}
 
 	if (game_state == GAME_STATES.COMPLETE) {
@@ -1051,12 +1053,18 @@ function renderGo(rankData) {
 	$('#rank-today').text(today);
 	$('#rank-overall').text(overall);
 	
+
 	$('#go').removeClass('no-display');
 	$('#go').animate({top: "+=475"}, 1000, "easeOutBounce");
 	$('#go-ok').click(function(){
-    recordScore(coverage);
-  });
-	$('#go-name').focus();
+    	recordScore(coverage);
+  	});
+	if (ranked) {
+		$('#go-name').focus();
+	} else {
+		$('#input').addClass('no-display');
+		$('#fail').removeClass('no-display');
+	}
   blink();
 }
 
@@ -1251,7 +1259,14 @@ function Level (originalMazeStr, specialMapImg, currentMazeStr, completed, visit
 /* Utility functions                 */
 /*************************************/
 function recordScore(s) {
-   n = $('#go-name').val();
+	var n = "???";
+	if (!$('#input').hasClass('no-display')){
+     	n = $('#go-name').val();
+	 	if (n.length != 3) {
+	 	   alert("Invalid initials! Initials must be 3 characters long and may not be all underscores.");
+	 	   return;
+	 	} 
+	 }
 	 $.post("scores", { "score" : { name: n, score: s}}, 
 		function (d) {
 			console.log("Score successfully logged");

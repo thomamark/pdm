@@ -33,15 +33,28 @@ class StaticPagesController < ApplicationController
 		@coverage = 0.0
 	end
 	
-	@today = @tt_today.index(@tt_today.find { |s| s.score <= @coverage})
-	@today = if @today.nil? then "Embarrassment"  else (@today+1).ordinalize end
+	@today = rankString(@tt_today.rindex { |s| s.score >= @coverage})
+	#@today = if @today > 7 then "Embarrassment"  else (@today+2).ordinalize end
 
-	@overall = @tt.index(@tt.find { |s| s.score <= @coverage})
-	@overall = if @overall.nil? then "Embarrassment"  else (@overall+1).ordinalize end
+	#@overall = @tt.rindex(@tt.find { |s| s.score <= @coverage})
+	@overall = rankString(@tt.rindex { |s| s.score >= @coverage})
+	
+	#@overall = if @overall.nil? or @overall > 7 then "Embarrassment"  else (@overall+2).ordinalize end
 
 	@result = {:today => @today, :overall => @overall, :coverage => @coverage}
 
 	render json: @result
   end
+
+  private
+	def rankString(r)
+		if r.nil? 
+			return (1).ordinalize
+		elsif r <= 7
+			return (r+2).ordinalize
+		else
+			return "Embarrassment"
+		end
+	end 
 
 end
