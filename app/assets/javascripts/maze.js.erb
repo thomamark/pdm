@@ -2402,8 +2402,8 @@ function update() {
 	renderScreen();
 
     if (game_state == GAME_STATES.PLAYING) {
-    	counter += 1;
-    	if (counter>MOVE_DELAY) {
+    	//counter += 1;
+    	//if (counter>MOVE_DELAY) {
     		var oldR = dragon.r;
     		var oldC = dragon.c;
             lastDir = dir;
@@ -2436,7 +2436,7 @@ function update() {
     		//}
 			maze.addPoint(dragon);
 
-          }
+          //}
         }
 	}
 
