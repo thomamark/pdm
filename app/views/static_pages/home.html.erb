@@ -137,6 +137,18 @@
 
 
 <script type="text/javascript">
+	var images = new Array()
+	function preload() {
+		for (i = 0; i < preload.arguments.length; i++) {
+			images[i] = new Image()
+			images[i].src = preload.arguments[i]
+		}
+	}
+	preload(
+		"<%= asset_path('button_empty.png') %>",
+		"<%= asset_path('button_empty_hover.png') %>"
+	)
+		
   var ENTER_KEY = 13;
   function onKeyDown($evt) {
     $evt.preventDefault();

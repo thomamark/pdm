@@ -208,7 +208,7 @@ var BLANK = undefined; //Value for ablank space.
 var CHANNEL_MAX = 10;   // number of simultaneous audio channels to allow
 var AUDIOCHANNELS = new Array(); // Array of audio elements (initialized below)
 var PLAY_FX = true; // whether or not to play sound effects
-var PLAY_THEME = true; // whether or not to play sound effects
+var PLAY_THEME = false; // whether or not to play sound effects
 var AUDIO_SRC= {};  //Caches the playable source strings from the audio elements
 var OGG_STR = "audio/ogg";
 var THEME;
@@ -2402,8 +2402,8 @@ function update() {
 	renderScreen();
 
     if (game_state == GAME_STATES.PLAYING) {
-    	//counter += 1;
-    	//if (counter>MOVE_DELAY) {
+    	counter += 1;
+    	if (counter>MOVE_DELAY) {
     		var oldR = dragon.r;
     		var oldC = dragon.c;
             lastDir = dir;
@@ -2436,7 +2436,7 @@ function update() {
     		//}
 			maze.addPoint(dragon);
 
-          //}
+          }
         }
 	}
 
