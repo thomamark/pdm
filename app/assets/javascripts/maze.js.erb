@@ -130,7 +130,7 @@ var RIGHT_ARROW=39;
 var DOWN_ARROW=40;
 var ESC=27;
 var ENTER =13;
-var MOVE_DELAY=10;
+var MOVE_DELAY=5;
 var CONTROLS_HIDDEN = false;
 var CONTROL_POS = 10*SPRITE_SCALE; 
 var JOYSTICK;
@@ -291,7 +291,7 @@ Point.prototype.toString = function(base, pad_w){
 			}
 			break;
 		case undefined:
-			console.log("Warning: point at " + this.r + "," + this.c + " has no type! Assuming it is blank.");
+			//console.log("Warning: point at " + this.r + "," + this.c + " has no type! Assuming it is blank.");
 			return pad(Number(TYPES.BLANK).toString(base), pad_w);
 			break;
 		default:
@@ -521,7 +521,7 @@ Maze.prototype.toString = function () {
 			}
 		}
 	} catch (err){
-		console.log("Error at row " + (i+1) + " and column " + (j+1) + 
+		//console.log("Error at row " + (i+1) + " and column " + (j+1) + 
 			"\n"+ err.message);
 		return null;
 	}
@@ -1005,7 +1005,7 @@ function calcCoverage() {
 	}
 
 	var c =((cL/tL) * 100).toFixed(2); 
-	console.log("coverage: " + c);
+	//console.log("coverage: " + c);
 	return c;
 }
 
@@ -1269,11 +1269,11 @@ function recordScore(s) {
 	 }
 	 $.post("scores", { "score" : { name: n, score: s}}, 
 		function (d) {
-			console.log("Score successfully logged");
+			//console.log("Score successfully logged");
 			window.location="/?ci=1";
 		})
       .fail(function () {
-			console.log("Problem communicating with high score server--score not recorded. Sorry!");
+			//console.log("Problem communicating with high score server--score not recorded. Sorry!");
 			window.location="/?ci=1";
 		});
 }
@@ -1580,8 +1580,8 @@ function postAssetLoad() {
     IMG_CACHE[CROWN_IMG.pdmId] = CROWN_IMG;
     IMG_CACHE[COMPLETE_IMG.pdmId] = COMPLETE_IMG;
 
-    OPS_SOUND_IMG = OPS_SOUND_ON_IMG;
-    OPS_FX_IMG = OPS_FX_ON_IMG;
+    OPS_SOUND_IMG = (PLAY_THEME) ? OPS_SOUND_ON_IMG : OPS_SOUND_OFF_IMG;
+	OPS_FX_IMG = (PLAY_FX) ? OPS_FX_ON_IMG : OPS_FX_OFF_IMG;
     OPS_SPEED_IMG = OPS_SPEED_FAST_IMG;
 
     //All the corner walls within a 9 slice are the same right now.
@@ -1863,11 +1863,11 @@ function changeSpeed() {
 	 switch (OPS_SPEED_IMG) {
 		case OPS_SPEED_FAST_IMG:
 			OPS_SPEED_IMG = OPS_SPEED_SLOW_IMG;
-			MOVE_DELAY= 15;
+			MOVE_DELAY= 10;
 			break;
 		default:
 			OPS_SPEED_IMG = OPS_SPEED_FAST_IMG;
-			MOVE_DELAY=10;
+			MOVE_DELAY=5;
 			break;
 	}
 }
