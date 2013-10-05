@@ -2318,9 +2318,9 @@ function startGameLoop() {
 }
 
 function gameLoop() {
-	//if (request) {
-	//	stopGameLoop();
-	//}
+	if (request) {
+		stopGameLoop();
+	}
 	//request=window.requestAnimationFrame(gameLoop,gameCanvas);
     request = window.setTimeout(gameLoop, FRAMERATE);
 	update();
