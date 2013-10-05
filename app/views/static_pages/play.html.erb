@@ -46,10 +46,6 @@
 -->
         	</div>
       </div>
-		<div id="alert" class="canvas no-display lightbox">
-			<p id="alert-text" class="alert ">&nbsp;</p>
-			<a id="alert-close" href="#" class="alert-button">ok</a>
-		</div>
 		</div>
 		<!--
         <div id="scorebar" class="scorebar">
@@ -64,8 +60,13 @@
         </div>
 		-->
         <div class="canvas" id="game-content">
+			<div id="alert" class="overlay no-display">
+				<p id="alert-text">&nbsp;</p>
+                <img id="alert-close" src="<%= asset_path('ok.png') %>" />
+				<div style="clear:both"></div>
+			</div>
 
-			   <div id="go" class="overlay no-display go center">
+			 <div id="go" class="overlay no-display go center">
                  	 <h1 id="go-title">GAME OVER</h1>
                  	 <p>coverage</p>
                  	 <p id="coverage" class="gold-text">10.2%</p>

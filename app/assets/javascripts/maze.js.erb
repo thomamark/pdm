@@ -1964,12 +1964,13 @@ function toggleMusic() {
 //Shows an alert or message on the game canvas.
 function toggleAlert(msg) {
 	if (!msg) {
-		$("#alert").addClass("no-display");
+		$("#alert").animate({top: "+=475"}, 1000, "easeInOutBack", 
+			function () {$('#alert').addClass("no-display").css({top:-275})});
 		unpause();
 	} else {
 		pause();
-		$("#alert").removeClass("no-display");
 		$("#alert-text").text(msg);
+		$("#alert").removeClass("no-display").animate({top: "+=475"}, 1000, "easeInOutBack");
 	}
 }
 
