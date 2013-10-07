@@ -34,4 +34,7 @@ Pdm::Application.configure do
 
   # Expands the lines which load the assets
   config.assets.debug = true
+
+  # Avoid precompiled assets
+  config.assets.prefix = "/assets_dev"
 end

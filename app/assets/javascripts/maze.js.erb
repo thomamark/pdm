@@ -521,8 +521,7 @@ Maze.prototype.toString = function () {
 			}
 		}
 	} catch (err){
-		//console.log("Error at row " + (i+1) + " and column " + (j+1) + 
-			//"\n"+ err.message);
+		//console.log("Error at row " + (i+1) + " and column " + (j+1) + "\n"+ err.message);
 		return null;
 	}
 	return s;
@@ -1963,14 +1962,21 @@ function toggleMusic() {
 
 //Shows an alert or message on the game canvas.
 function toggleAlert(msg) {
-	if (!msg) {
-		$("#alert").animate({top: "+=475"}, 1000, "easeInOutBack", 
-			function () {$('#alert').addClass("no-display").css({top:-275})});
+	if (!$('#alert').hasClass("no-display")) {
+		// Alert is visible
+		$("#alert").animate({top: "+="+($(window).height()+200) }, 1000, "easeInOutBack", 
+			function () {
+				$('#alert').addClass("no-display");
+			});
 		unpause();
 	} else {
+		// Alert isn't visible yet
 		pause();
 		$("#alert-text").text(msg);
-		$("#alert").removeClass("no-display").animate({top: "+=475"}, 1000, "easeInOutBack");
+		var h = $('#alert').height();
+		var t = -h -275;
+		var stop = GAME_PX_H/2 - h/2;
+		$("#alert").css({top: t}).removeClass("no-display").animate({top: stop}, 1000, "easeInOutBack");
 	}
 }
 
