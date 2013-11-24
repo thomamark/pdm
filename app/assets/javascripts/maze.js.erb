@@ -51,6 +51,7 @@ var STAR_IMG;
 var GOAL_IMG; 
 var PANDA_IMG;
 var PANDA_IMG_STATIC;
+var PANDA_RESCUED_IMG;
 var PORTAL_IMG;
 var HEAD_UP_IMG;
 var HEAD_DOWN_IMG;
@@ -110,6 +111,7 @@ var OPS_SPEED_SLOW_IMG;
 var OPS_SPEED_IMG;
 
 var MAP_VISIBLE = false;
+var ANIM_QUEUE = [];
 
 //Hacky way to get images to JSON.stringify. See removeCyclicalStructures
 var IMG_PREFIX = "img";
@@ -987,6 +989,8 @@ Maze.prototype.addDragonBody = function(dir, lastDir, oldR, oldC) {
 /*************************************/
 
 function cleanUp() {
+	//delete all remaining animations.
+	ANIM_QUEUE = [];
     stopGameLoop();
 }
 
@@ -1163,7 +1167,26 @@ function mazeComplete(dest) {
 	}
 }
 
+
+
+//adds an element to the animation queue
+function addToAnimQ(o) {
+	ANIM_QUEUE.push(o);
+}
+
+//An object to be added to the animation queue
+function AnimQObj (img, x, y) {
+	this.img = img;
+	this.x = x;
+	this.y = y;
+	this.frames= 15;
+	this.alpha= 1.0;
+	this.alphastep= (this.alpha/this.frames);
+}
+
 function collectBonus() {
+	var xy=maze.grid2canvas(dragon.r-1, dragon.c);
+	addToAnimQ(new AnimQObj(PANDA_RESCUED_IMG, xy.x, xy.y));
     maze.collectBonus();
     playMultiSound('pick_up');
 }
@@ -1529,7 +1552,8 @@ function loadAssets() {
 		//Sprite sheets
     //Note that asset ID name (first param) must match key in sprite map 
 		PDM_SS_IMG = createImgAsset('pdm_static_ss', "<%= asset_path('pdm_dragon_panda.png') %>");
-		PANDA_IDLE_IMG = createImgAsset('panda_idle', "<%= asset_path('pdm_panda_idle.png') %>");
+		createImgAsset('panda_idle', "<%= asset_path('pdm_panda_idle.png') %>");
+		createImgAsset('panda_rescued', "<%= asset_path('pdm_panda_rescued.png') %>");
 		createImgAsset('head_down_anim', "<%= asset_path('pdm_head_down.png') %>");
 		createImgAsset('head_left_anim', "<%= asset_path('pdm_head_left.png') %>");
 		createImgAsset('head_right_anim', "<%= asset_path('pdm_head_right.png') %>");
@@ -1552,6 +1576,7 @@ function loadAssets() {
 function postAssetLoad() {
   //animations
 	PANDA_IMG = SPRITES['panda_idle'];
+	PANDA_RESCUED_IMG= SPRITES['panda_rescued'];
 	PORTAL_IMG = SPRITES['Goal_all'];
 	//HEAD_DOWN_IMG = SPRITES['head_down_anim'];
 	//HEAD_LEFT_IMG = SPRITES['head_left_anim'];
@@ -2193,7 +2218,8 @@ function init_levels() {
 	//15
 	lvls.push(new Level("20f0e010101010101010101010101010101000000000000000000000000010100000000000000000000000001010000010001000001020100000101000002000000000000000000010100000100010000010001000001030e0000000000000400000000000310030e00000000000000000000000003100100000000000000000000000001010000010001000001000100000101000000000000000000020000010100000102010000010001000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101"));
 	//16
-	lvls.push(new Level("20f0e0101010101010309030901010101010101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010100000000000000000000000001030f0000000001000100000000000311030f00000000010201000000000003110100000000010401000000000001010000000001010100000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101", "\"Only a fearless commander can save all Pandas,\"", "\"This may not be the last time we see such illusions.\""));
+	//lvls.push(new Level("20f0e0101010101010309030901010101010101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010100000000000000000000000001030f0000000001000100000000000311030f00000000010201000000000003110100000000010401000000000001010000000001010100000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101", "\"Only a fearless commander can save all Pandas,\"", "\"This may not be the last time we see such illusions.\""));
+	lvls.push(new Level("20f0e0101010101010309030901010101010101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010100000000000000000000000001030f0000000001000100000000000311030f00000000010201000000000003110100000000010401000000000001010000000001010100000000000101000000000000000000000000010100000000000000000000000001010000000000000000000000000101000000000000000000000000010101010101010101010101010101" ));
 	//17
 	lvls.push(new Level("20f0e0101010101010101010101030a0101010000000000000000010000000101000000000000000001000000010100000000000100000100000001010204000002010200010200000101010101000001000101010100010310000001000001000001020000010310000001000001000001000000010100000100000100000100000001010000010000010002010000000101000001000001000101000000010100000100000100000200000001010000000000010000000000000101000000000001000000000000010101010101010101010101010101"));
 	//18
@@ -2480,10 +2506,25 @@ function update() {
 
     frame = (frame+1) % FPS;
 	//Increment the animation of all animatable sprites every ANIM_DELAY frames
+	for (var k in ANIM_QUEUE) {
+		var o = ANIM_QUEUE[k];
+		renderObject(wallStage, o.img, o.x, o.y, undefined, o.alpha);
+	}
 	if (frame % ANIM_DELAY == 0) {
 		for (var k in SPRITES) {
 			var sprite =SPRITES[k];
 			sprite.current = (sprite.current + 1) % sprite.total_frames;
+		}
+		for (var k in ANIM_QUEUE) {
+			var o = ANIM_QUEUE[k];
+			if (o.frames == 0) {
+				//remove element after it's been animated enough
+				ANIM_QUEUE.splice(k, 1);
+			} else {
+				o.y -= 2;
+				o.alpha -= o.alphastep;
+				o.frames -=1;
+			}
 		}
 	}
     if (game_state == GAME_STATES.PLAYING) {
@@ -2687,13 +2728,15 @@ function renderPauseScreen(xOff, yOff) {
 }
 
 //Abstract the details of drawing to support Sprites.
-function renderObject(stage, sprite, x, y, scale) {
+function renderObject(stage, sprite, x, y, scale, alpha) {
 	var sx = sprite.sx + sprite.w*sprite.current;
 	var sw = (scale) ? sprite.w * scale : sprite.scaled_w;
 	var sh = (scale) ? sprite.h * scale : sprite.scaled_h;
+	if (alpha) { stage.globalAlpha = alpha; }
 	stage.drawImage(sprite.img, 
 			sx, sprite.sy, sprite.w, sprite.h,
 			x, y, sw, sh);
+	if (alpha) { stage.globalAlpha = 1.0; }
 }
 
 /*
@@ -2833,6 +2876,11 @@ var SPRITE_MAP = {
 				"total_frames": 4,
 				"w" : 24,
 				"h" : 25
+				},
+"panda_rescued" : {"type": SS_TYPES.ANIMATION,
+				"total_frames": 2,
+				"w" : 26,
+				"h" : 26
 				},
 "head_right_anim" : {"type": SS_TYPES.ANIMATION,
 				"total_frames": 4,
