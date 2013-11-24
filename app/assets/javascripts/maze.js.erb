@@ -14,7 +14,10 @@ var DEBUG = false;
 
 /* Graphics */
 //Constants
-var FRAMERATE = 25;
+var FRAMERATE = 25; //ms per update
+var FPS= 1000/FRAMERATE; //frames per second
+var MOVE_DELAY=5; // # frames before dragon moves
+var ANIM_DELAY=4; // # frames per animation
 var SPRITE_SCALE = 2;
 var BASE_W = 32;
 var BASE_H= 16;
@@ -47,9 +50,11 @@ var SNAKE_IMG;
 var STAR_IMG; 
 var GOAL_IMG; 
 var PANDA_IMG;
+var PANDA_IMG_STATIC;
 var PORTAL_IMG;
 var HEAD_UP_IMG;
 var HEAD_DOWN_IMG;
+var HEAD_DOWN_IMG_STATIC;
 var HEAD_LEFT_IMG;
 var HEAD_RIGHT_IMG;
 var TAIL_UP_IMG;
@@ -132,7 +137,6 @@ var RIGHT_ARROW=39;
 var DOWN_ARROW=40;
 var ESC=27;
 var ENTER =13;
-var MOVE_DELAY=5;
 var CONTROLS_HIDDEN = false;
 var CONTROL_POS = 10*SPRITE_SCALE; 
 var JOYSTICK;
@@ -181,7 +185,7 @@ var maze; //the current maze
 var dir;
 var lastDir;
 var nextDir;
-var counter;
+var frame;
 var TYPES = {
 	BLANK : 0,
 	WALL : 1,
@@ -330,7 +334,7 @@ function PandaPoint(r,c) {
 
 //Dragon starting point
 function StartPoint(r,c) {
-	return new Point(HEAD_DOWN_IMG, r, c, function () {}, TYPES.START, DEFAULT_STARTPT_YOFFSET);
+	return new Point(HEAD_DOWN_IMG_STATIC, r, c, function () {}, TYPES.START, DEFAULT_STARTPT_YOFFSET);
 }
 
 //Special point for background tiles. These are used initially to render
@@ -1032,14 +1036,13 @@ function game_over() {
 	game_state = GAME_STATES.GAME_OVER;
 	cleanUp(); //stop the game loop
 	var c = calcCoverage();
-	if (c < 100.0) {
-		toggleAlert("You made it out with "+c+"% of the pandas. That means only you only left " + (100.0-c) + "% to die alone. Not bad, but a true commander leaves no one behind.");
-	} else {
-		toggleAlert("Unbelievable! You have saved every Panda! You are the true Panda Dragon commander!");
-
-	}
-	//getCurrentRank(renderGo);
-	//renderWrapUp(wallStage, 200,125);
+//	if (c < 100.0) {
+//		toggleAlert("You made it out with "+c+"% of the pandas. That means you only left " + (100.0-c).toFixed(2) + "% to die alone. Not bad, but a true commander leaves no one behind.", function() {getCurrentRank(renderGo)});
+//	} else {
+//		toggleAlert("Unbelievable! You have saved every Panda! You are the true Panda Dragon commander!",function() {getCurrentRank(renderGo)});
+//
+//	}
+	getCurrentRank(renderGo);
 }
 
 function blink() {
@@ -1524,7 +1527,13 @@ function loadAssets() {
 //		OPS_SPEED_SLOW_IMG = createImgAsset('ops_speed_slow', "<%= asset_path('options_speed_slow_white.png') %>")
 
 		//Sprite sheets
+    //Note that asset ID name (first param) must match key in sprite map 
 		PDM_SS_IMG = createImgAsset('pdm_static_ss', "<%= asset_path('pdm_dragon_panda.png') %>");
+		PANDA_IDLE_IMG = createImgAsset('panda_idle', "<%= asset_path('pdm_panda_idle.png') %>");
+		createImgAsset('head_down_anim', "<%= asset_path('pdm_head_down.png') %>");
+		createImgAsset('head_left_anim', "<%= asset_path('pdm_head_left.png') %>");
+		createImgAsset('head_right_anim', "<%= asset_path('pdm_head_right.png') %>");
+		createImgAsset('head_up_anim', "<%= asset_path('pdm_head_up.png') %>");
 		WALL_TILES_SS_IMG = createImgAsset('wall_tiles_ss', "<%= asset_path('pdm_walls_tiles.png') %>");
 		OPTIONS_SS_IMG = createImgAsset('options_map_ss', "<%= asset_path('pdm_options_map.png') %>");
 		GOAL_SS_IMG = createImgAsset('Goal_all', "<%= asset_path('Goal_all.png') %>");
@@ -1541,13 +1550,20 @@ function loadAssets() {
 }
 
 function postAssetLoad() {
-	PANDA_IMG = SPRITES['Panda.png'];
-	//PORTAL_IMG = SPRITES['Goal_1.png'];
+  //animations
+	PANDA_IMG = SPRITES['panda_idle'];
 	PORTAL_IMG = SPRITES['Goal_all'];
-	HEAD_UP_IMG = SPRITES['Head_Up.png'];
-	HEAD_DOWN_IMG = SPRITES['Head_Down.png'];
-	HEAD_LEFT_IMG = SPRITES['Head_Left.png'];
-	HEAD_RIGHT_IMG = SPRITES['Head_Right.png'];
+	HEAD_DOWN_IMG = SPRITES['head_down_anim'];
+	HEAD_LEFT_IMG = SPRITES['head_left_anim'];
+  HEAD_RIGHT_IMG = SPRITES['head_right_anim'];
+	HEAD_UP_IMG = SPRITES['head_up_anim'];
+
+  //static sprites
+	PANDA_IMG_STATIC = SPRITES['Panda.png'];
+	HEAD_DOWN_IMG_STATIC = SPRITES['Head_Down.png'];
+	//HEAD_LEFT_IMG = SPRITES['Head_Left.png'];
+	//HEAD_RIGHT_IMG = SPRITES['Head_Right.png'];
+	//HEAD_UP_IMG = SPRITES['Head_Up.png'];
 	TAIL_UP_IMG = SPRITES['Tail_Up.png'];
 	TAIL_DOWN_IMG = SPRITES['Tail_Down.png'];
 	TAIL_LEFT_IMG = SPRITES['Tail_Right.png'];
@@ -1826,7 +1842,7 @@ function initUi() {
     $(mapCanvas).attr("width", wpx);
     $(tileCanvas).attr("height", hpx);
     $(tileCanvas).attr("width", wpx);
-	counter = 0;
+	frame = 0;
 	CanvasTextFunctions.enable(gameStage);
 
     $("#maze-canvas-background").click(gameClick);
@@ -1872,7 +1888,7 @@ function maze_init(){
 
 	game_state = GAME_STATES.READY;
 	var rc = (maze.getEntry()) ? maze.getEntry(): maze.getStart();
-	dragon = new Point(HEAD_DOWN_IMG, rc.r, rc.c, function () {});
+	dragon = new Point(HEAD_DOWN_IMG_STATIC, rc.r, rc.c, function () {});
 	setHeadImg(dragon, pdm.state.exitdir);
 	maze.addPoint(dragon);
 	maze.render(wallStage);
@@ -1996,26 +2012,39 @@ function toggleMusic() {
     }
 }
 
-
 //Shows an alert or message on the game canvas.
-function toggleAlert(msg) {
+function toggleAlert(msg, completeFn) {
 	if (!$('#alert').hasClass("no-display")) {
 		// Alert is visible
 		var h = $('#alert').height();
-		var t = -h -275;
-		$("#alert").animate({top: t }, 1000, "easeInOutBack", 
+		var t = -h -50;
+		$("#alert").animate(
+			{top: t }, 1000, "easeInOutBack", 
 			function () {
+				if(completeFn) {
+          completeFn();
+        }
 				$('#alert').addClass("no-display");
+				$("#alert-close").click(function () { toggleAlert(false); });
 			});
 		unpause();
 	} else {
 		// Alert isn't visible yet
 		pause();
+		if (completeFn) {
+				$("#alert-close").click(
+					function () {
+						toggleAlert(false, completeFn);
+					});
+		}
 		$("#alert-text").text(msg);
 		var h = $('#alert').height();
 		var t = -h -275;
 		var stop = GAME_PX_H/2 - h/2;
-		$("#alert").css({top: t}).removeClass("no-display").animate({top: stop}, 1000, "easeInOutBack");
+		$("#alert")
+			.css( {top: t})
+			.removeClass("no-display")
+			.animate({top: stop}, 1000, "easeInOutBack");
 	}
 }
 
@@ -2448,9 +2477,16 @@ function update() {
 	setHeadImg(dragon, dir);
 	renderScreen();
 
+    frame = (frame+1) % FPS;
+	//Increment the animation of all animatable sprites every ANIM_DELAY frames
+	if (frame % ANIM_DELAY == 0) {
+		for (var k in SPRITES) {
+			var sprite =SPRITES[k];
+			sprite.current = (sprite.current + 1) % sprite.total_frames;
+		}
+	}
     if (game_state == GAME_STATES.PLAYING) {
-    	counter += 1;
-    	if (counter>MOVE_DELAY) {
+    	if (frame%MOVE_DELAY==0) {
     		var oldR = dragon.r;
     		var oldC = dragon.c;
             lastDir = dir;
@@ -2458,19 +2494,15 @@ function update() {
     	
     		if (dir=="left") {
     			dragon.c = dragon.c - 1;
-    			counter =0;
     		}
     		if (dir=="right") {
     			dragon.c = dragon.c + 1;
-    			counter =0;
     		}
     		if (dir=="up") {
     			dragon.r = dragon.r - 1;
-    			counter =0;
     		}
     		if (dir=="down") {	
     			dragon.r = dragon.r + 1;
-    			counter =0;
     		}	
 
 			maze.removePoint(oldR, oldC);
@@ -2595,7 +2627,7 @@ function renderControls(stage, xOff, yOff) {
 	//draw background box
 	roundRect(stage, lcs, vpb, 80*SPRITE_SCALE, bh, br, "rgba(0,0,0, 0.8)", false);
 	//render Panda
-	renderObject(stage, PANDA_IMG, 7*SPRITE_SCALE-xOff, 3*SPRITE_SCALE+yOff, SPRITE_SCALE/2);
+	renderObject(stage, PANDA_IMG_STATIC, 7*SPRITE_SCALE-xOff, 3*SPRITE_SCALE+yOff, SPRITE_SCALE/2);
 	//render total score
 	stagePrint("x" + pdm.state.totalScore+" + "+LEVEL_SCORE,  23*SPRITE_SCALE-xOff, vpt, stage, "#fff");
 
@@ -2605,7 +2637,7 @@ function renderControls(stage, xOff, yOff) {
 	//draw background box
 	roundRect(stage, lives_x, vpb, 40*SPRITE_SCALE, bh, br, "rgba(0,0,0, 0.8)", false);
 	//render Panda
-	renderObject(stage, HEAD_DOWN_IMG, lives_x-5*SPRITE_SCALE, SPRITE_SCALE+yOff, SPRITE_SCALE/2);
+	renderObject(stage, HEAD_DOWN_IMG_STATIC, lives_x-5*SPRITE_SCALE, SPRITE_SCALE+yOff, SPRITE_SCALE/2);
 	//render total score
 	stagePrint("x" + pdm.state.lives,  lives_x+14*SPRITE_SCALE, vpt, stage, "#fff");
 
@@ -2653,8 +2685,7 @@ function renderPauseScreen(xOff, yOff) {
 	}
 }
 
-//Abstract the details of drawing to support multiple platoforms.
-//Today, only rendering on HTML5 cavas is supported, but not for long
+//Abstract the details of drawing to support Sprites.
 function renderObject(stage, sprite, x, y, scale) {
 	var sx = sprite.sx + sprite.w*sprite.current;
 	var sw = (scale) ? sprite.w * scale : sprite.scaled_w;
@@ -2662,7 +2693,6 @@ function renderObject(stage, sprite, x, y, scale) {
 	stage.drawImage(sprite.img, 
 			sx, sprite.sy, sprite.w, sprite.h,
 			x, y, sw, sh);
-	sprite.current = (sprite.current + 1 ) % sprite.total_frames;
 }
 
 /*
@@ -2798,185 +2828,209 @@ var SPRITE_MAP = {
 				"w" : 33,
 				"h" : 38
 				},
+"panda_idle" : {"type": SS_TYPES.ANIMATION,
+				"total_frames": 4,
+				"w" : 24,
+				"h" : 25
+				},
+"head_right_anim" : {"type": SS_TYPES.ANIMATION,
+				"total_frames": 4,
+				"w" : 32,
+				"h" : 32
+				},
+"head_left_anim" : {"type": SS_TYPES.ANIMATION,
+				"total_frames": 4,
+				"w" : 32,
+				"h" : 32
+				},
+"head_up_anim" : {"type": SS_TYPES.ANIMATION,
+				"total_frames": 4,
+				"w" : 32,
+				"h" : 32
+				},
+"head_down_anim" : {"type": SS_TYPES.ANIMATION,
+				"total_frames": 4,
+				"w" : 32,
+				"h" : 32
+				},
 "pdm_static_ss": {
 		"type" : SS_TYPES.STATIC,
 		"sprites": {
-
-"Body_DownToLeft.png":
-{
-	"frame": {"x":2,"y":2,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_DownToRight.png":
-{
-	"frame": {"x":36,"y":2,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_DownToUp.png":
-{
-	"frame": {"x":70,"y":2,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_LeftToDown.png":
-{
-	"frame": {"x":2,"y":20,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_LeftToRight.png":
-{
-	"frame": {"x":36,"y":20,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_LeftToUp.png":
-{
-	"frame": {"x":70,"y":20,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_RightToDown.png":
-{
-	"frame": {"x":2,"y":38,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_RightToLeft.png":
-{
-	"frame": {"x":36,"y":38,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_RightToUp.png":
-{
-	"frame": {"x":70,"y":38,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_UpToDown.png":
-{
-	"frame": {"x":2,"y":56,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_UpToLeft.png":
-{
-	"frame": {"x":36,"y":56,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Body_UpToRight.png":
-{
-	"frame": {"x":70,"y":56,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Goal_1.png":
-{
-	"frame": {"x":2,"y":74,"w":33,"h":38},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":33,"h":38},
-	"sourceSize": {"w":33,"h":38}
-},
-"Head_Down.png":
-{
-	"frame": {"x":37,"y":74,"w":32,"h":32},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
-	"sourceSize": {"w":32,"h":32}
-},
-"Head_Left.png":
-{
-	"frame": {"x":71,"y":74,"w":32,"h":32},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
-	"sourceSize": {"w":32,"h":32}
-},
-"Head_Right.png":
-{
-	"frame": {"x":2,"y":114,"w":32,"h":32},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
-	"sourceSize": {"w":32,"h":32}
-},
-"Head_Up.png":
-{
-	"frame": {"x":36,"y":114,"w":32,"h":32},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
-	"sourceSize": {"w":32,"h":32}
-},
-"Panda.png":
-{
-	"frame": {"x":70,"y":114,"w":24,"h":25},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":24,"h":25},
-	"sourceSize": {"w":24,"h":25}
-},
-"Tail_Down.png":
-{
-	"frame": {"x":2,"y":148,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Tail_Left.png":
-{
-	"frame": {"x":36,"y":148,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Tail_Right.png":
-{
-	"frame": {"x":70,"y":148,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
-},
-"Tail_Up.png":
-{
-	"frame": {"x":2,"y":166,"w":32,"h":16},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
-	"sourceSize": {"w":32,"h":16}
+			"Body_DownToLeft.png":
+			{
+				"frame": {"x":2,"y":2,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_DownToRight.png":
+			{
+				"frame": {"x":36,"y":2,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_DownToUp.png":
+			{
+				"frame": {"x":70,"y":2,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_LeftToDown.png":
+			{
+				"frame": {"x":2,"y":20,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_LeftToRight.png":
+			{
+				"frame": {"x":36,"y":20,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_LeftToUp.png":
+			{
+				"frame": {"x":70,"y":20,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_RightToDown.png":
+			{
+				"frame": {"x":2,"y":38,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_RightToLeft.png":
+			{
+				"frame": {"x":36,"y":38,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_RightToUp.png":
+			{
+				"frame": {"x":70,"y":38,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_UpToDown.png":
+			{
+				"frame": {"x":2,"y":56,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_UpToLeft.png":
+			{
+				"frame": {"x":36,"y":56,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Body_UpToRight.png":
+			{
+				"frame": {"x":70,"y":56,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Goal_1.png":
+			{
+				"frame": {"x":2,"y":74,"w":33,"h":38},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":33,"h":38},
+				"sourceSize": {"w":33,"h":38}
+			},
+			"Head_Down.png":
+			{
+				"frame": {"x":37,"y":74,"w":32,"h":32},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+				"sourceSize": {"w":32,"h":32}
+			},
+			"Head_Left.png":
+			{
+				"frame": {"x":71,"y":74,"w":32,"h":32},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+				"sourceSize": {"w":32,"h":32}
+			},
+			"Head_Right.png":
+			{
+				"frame": {"x":2,"y":114,"w":32,"h":32},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+				"sourceSize": {"w":32,"h":32}
+			},
+			"Head_Up.png":
+			{
+				"frame": {"x":36,"y":114,"w":32,"h":32},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":32},
+				"sourceSize": {"w":32,"h":32}
+			},
+			"Panda.png":
+			{
+				"frame": {"x":70,"y":114,"w":24,"h":25},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":24,"h":25},
+				"sourceSize": {"w":24,"h":25}
+			},
+			"Tail_Down.png":
+			{
+				"frame": {"x":2,"y":148,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Tail_Left.png":
+			{
+				"frame": {"x":36,"y":148,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Tail_Right.png":
+			{
+				"frame": {"x":70,"y":148,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
+			},
+			"Tail_Up.png":
+			{
+				"frame": {"x":2,"y":166,"w":32,"h":16},
+				"rotated": false,
+				"trimmed": false,
+				"spriteSourceSize": {"x":0,"y":0,"w":32,"h":16},
+				"sourceSize": {"w":32,"h":16}
 }}},
 
 "options_map_ss" : {
