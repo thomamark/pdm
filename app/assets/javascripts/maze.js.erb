@@ -111,9 +111,8 @@ var OPS_FX_IMG;
 var OPS_SPEED_FAST_IMG;
 var OPS_SPEED_SLOW_IMG;
 var OPS_SPEED_IMG;
+var NULL_IMG;
 
-var MAP_VISIBLE = false;
-var ANIM_QUEUE = [];
 
 //Hacky way to get images to JSON.stringify. See removeCyclicalStructures
 var IMG_PREFIX = "img";
@@ -127,6 +126,9 @@ var LOAD_ASSETS = true;
 var INIT_GAME = true;
 
 var DEFAULT_LIVES = 10;
+var MAP_VISIBLE = false;
+var ANIM_QUEUE = [];
+var MOUSE_DOWN = false;
 
 /* Maze encoding variables */
 var ENC_W = 2; //num of digits per point in a string
@@ -240,6 +242,7 @@ var THEME;
  @arg pointType the type ID for this point
  @arg yoff optional yoffset in pixels
  @arg xoff optiona xoffset in pixels
+ @arg highlight whether or not to highlight this point.
 */
 function Point(img,r, c, isOnFn, pointType, yoff, xoff) {
 	this.img=img;
@@ -249,6 +252,7 @@ function Point(img,r, c, isOnFn, pointType, yoff, xoff) {
 	this.yOffset= (yoff) ? yoff : 0;
 	this.xOffset= (xoff) ? xoff : 0;
     this.obj_type=pointType;
+	this.highlight = false;
 }
 
 /*
@@ -309,9 +313,20 @@ Point.prototype.toString = function(base, pad_w){
 	}
 }
 
+/* Turn this point's highlight on or off */
+Point.prototype.toggleHighlight = function () {
+	this.highlight = !this.highlight;
+}
+
 /* A Wall in the maze */
 function WallPoint(r,c)  {
 	return new Point(WALL_BLOCK_IMG, r, c, mazeCollision, TYPES.WALL, DEFAULT_WALL_YOFFSET);
+}
+
+function HighlightPoint(r,c) {
+	var p = new Point(NULL_IMG, r,c, function () {});
+	p.toggleHighlight();
+	return p;
 }
 
 //function MagicWallPoint(r,c) {
@@ -1596,6 +1611,7 @@ function loadAssets() {
 		/* one-off images (not in sprite sheet) */
 		MAP_IMG = createImgAsset('map', "<%= asset_path('map.png') %>");
 		MAP_HEADER_BG = createImgAsset('map_header_bg', "<%= asset_path('optionsHeaderBg.png') %>");
+		NULL_IMG = new Sprite(createImgAsset('null_img', "<%= asset_path('null.png') %>"), 0,0,1,1);
 
 		//Only used in level builder
 //      	DELETE_IMG = createImgAsset("delete", 
@@ -1657,6 +1673,7 @@ function postAssetLoad() {
 	PAUSE_ICON = SPRITES['pauseIcon.png'];
 	BACK_IMG = SPRITES['backIcon.png'];
 
+
 	//level builder sprites
 	DELETE_IMG = SPRITES['delete.png'];
 	PIX_IMG = SPRITES['1x1.gif'];
@@ -1710,15 +1727,8 @@ function createImgAsset($id,$src) {
 }
 
 //Load all images
-//for i in sprites, new sprite(ss_img, name)
 //have a map of name : sprite properties (including animation)
 //renderObject will recognize sprites: reuse img, set offset, animate, etc.
-
-//type : {static, animation}
-//Animation-only
-//total_frames: 3
-//width : 32
-//height: 64
 
 function Sprite (img, sx, sy, w, h, scale, total_frames) {
 	this.img = img;
@@ -1837,17 +1847,26 @@ function pauseClick(e, evt) {
 function gameClick(e, evt) {
 		var e = (evt) ? evt : e; 
 		if (game_state == GAME_STATES.GAME_OVER) { return; }
-        //See if you clicked an option and, if so, call the option fn.
         var pos = findPos(this);
         var x = e.pageX - pos.x - maze.xOffset;
         var y = e.pageY - pos.y - maze.yOffset;
         var c = Math.ceil(x/GRID_W);
         var r = Math.ceil(y/GRID_H);
+        //See if you clicked an option and, if so, call the option fn.
         if (r==1 && c==PAUSE_ICON_POS) {
             togglePauseScreen();
         }  else if (r==1 && c==MAP_ICON_POS) {
             toggleOptions();
-        }
+        } else {
+			//toggle this point's highlight
+			//need to make sure point gets highlighted and highlight can be toggled off.
+			if (maze.getPoint(r, c)) {
+				maze.getPoint(r,c).toggleHighlight();
+			} else {
+				maze.addPoint(HighlightPoint(r,c));
+			}
+		}
+		
 }
 
 function mapClick(e) {
@@ -1903,6 +1922,19 @@ function initUi() {
 
     $("#maze-canvas-background").click(gameClick);
 	$("#map-canvas").click(mapClick);
+	$("#maze-canvas-background").mousedown(function(e) {
+	 	MOUSE_DOWN = true;
+	    $("#maze-canvas-background").trigger("click", [e]);
+     });
+
+	$('#maze-canvas-background').mousemove( function (e) {
+		if (MOUSE_DOWN) {
+			$("#maze-canvas-background").trigger("click", [e]);
+		}
+	}
+	);
+
+     $("#maze-canvas-background").mouseup(function(e) {MOUSE_DOWN = false;});
     
     //if (is_touch_device()) {
         JOYSTICK = new VirtualJoystick({
@@ -2782,12 +2814,18 @@ function renderMazeObject($obj, stage) {
     var x = xy.x+$obj.xOffset;
     var y = xy.y+$obj.yOffset;
 	try {
+		if ($obj.highlight) {
+			stage.globalAlpha = 0.6;
+			stage.fillStyle="#FFFF00";
+			stage.fillRect(xy.x, xy.y, GRID_W, GRID_H);
+			stage.globalAlpha = 1.0;
+		}
 		renderObject(stage, $obj.img,x,y);
 		if (DEBUG && $obj.obj_type && $obj.obj_type == TYPES.GOAL) {
 			stagePrint($obj.destination, xy.x+Math.floor(GRID_W/2), xy.y, stage, "#000", "12px sans-serif");
 		}
 	} catch($error) {
-		alert($error.message);
+		if (DEBUG) {alert($error.message)};
 		console.log("Error rendering object: "+ $error.message)
 	}
 }
